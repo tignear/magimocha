@@ -16,7 +16,7 @@ struct src {
 	using difference_type = typename std::iterator_traits<Iterator>::difference_type;
 	using pointer = typename std::iterator_traits<Iterator>::pointer;
 	using reference = typename std::iterator_traits<Iterator>::reference;
-	constexpr auto isEnd() {
+	constexpr auto is_end() {
 		return it_ == end_;
 	}
 	const value_type& operator*() noexcept { return *it_; }
@@ -315,10 +315,11 @@ TEST(MagiMocha, declation_name) {
 
 TEST(MagiMocha, declation_lambda_arg2) {
 	using namespace std::string_literals;
-	std::u32string s = U"&(x,y)1+1";
+	std::u32string str = U"&(x,y)1+1"s;
 
 	auto p = x::declaration_lambda();
-	auto r = p(src{ cbegin(s),cend(s) }).get()->params();
+	auto br = p(src{ cbegin(str),cend(str) });
+	auto r = br.get()->params();
 	EXPECT_EQ(r.at(0)->name(),U"x" );
 	EXPECT_EQ(r.at(1)->name(), U"y");
 }
@@ -384,5 +385,88 @@ TEST(MagiMocha, operator_tokenizer) {
 
 	auto p = x::operator_tokenizer();
 	auto r = p(src{ cbegin(s),cend(s) }).get();
-	EXPECT_TRUE(true);
+	EXPECT_TRUE(r.size()==9);
+}
+TEST(MagiMocha, nyan) {
+	std::tuple<
+		std::string,
+		std::string,
+		std::string,
+		std::string,
+		std::string,
+		std::string, 
+		std::string,
+		std::string, 
+		std::string, 
+		std::string, 
+		std::string, 
+		std::string,
+		std::string, 
+		std::string, 
+		std::string, 
+		std::string, 
+		std::string,
+		std::string, 
+		std::string,
+		std::string, 
+		std::string, 
+		std::string,
+		std::string, 
+		std::string,
+		std::string, 
+		std::string, 
+		std::string, 
+		std::string,
+		std::string, 
+		std::string,
+		std::string, 
+		std::string,
+		std::string,
+		std::string,
+		std::string, 
+		std::string, 
+		std::string, 
+		std::string> s = {
+		std::string{{5,7,26,89}},
+				std::string{{5,7,26,89}},
+		std::string{{5,7,26,89}},
+				std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}},
+std::string{{5,7,26,89}}
+
+
+	};
+	std::cout<<std::get<5>(s);
 }

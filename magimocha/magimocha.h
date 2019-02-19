@@ -46,7 +46,7 @@ namespace tig::magimocha {
 			struct any:public cppcp::parser<Src,  typename Src::value_type,any<Src>> {
 				constexpr any() {}
 				constexpr auto parse(Src&& src)const{
-					if (src.isEnd()) {
+					if (src.is_end()) {
 						throw cppcp::eof_exception();
 					}
 					else {
@@ -123,6 +123,9 @@ namespace tig::magimocha {
 				}
 				constexpr declaration_parameter(std::optional<string_type> s) : name_(s) {
 
+				}
+				~declaration_parameter() {
+					name_ = std::nullopt;
 				}
 				constexpr const std::optional<string_type> name()const {
 					return name_;
@@ -994,22 +997,22 @@ namespace tig::magimocha {
 			}
 			constexpr static auto identifier_characters() {
 				return cppcp::many(
-					cppcp::sup<Itr, string_type>(string_type()),
+					cppcp::sup<Itr>(string_type()),
 					identifier_character(),
-					[](auto&& a, const auto& e) {
-					a.push_back(e);
-					return cppcp::accm::contd(a);
-				}
+					[]( auto&& a, const auto& e) {
+						a.push_back(e);
+						return cppcp::accm::contd(a);
+					}
 				);
 			}
 			constexpr static auto identifier() {
 				return cppcp::trys(
 					cppcp::map(cppcp::join(identifier_head(), identifier_characters()), [](const auto& e) {
-					return string_type{ {std::get<0>(e)} }+std::get<1>(e);
-				}),
+						return string_type{ {std::get<0>(e)} }+std::get<1>(e);
+					}),
 					cppcp::map(cppcp::join(underbar(), identifier_character(), identifier_characters()), [](const auto& e) {
-					return string_type{ {std::get<0>(e),std::get<1>(e)} }+std::get<2>(e);
-				})
+						return string_type{ {std::get<0>(e),std::get<1>(e)} }+std::get<2>(e);
+					})
 					);
 			}
 			constexpr static auto implicit_parameter_name() {
@@ -1122,17 +1125,18 @@ namespace tig::magimocha {
 
 			constexpr static auto declaration_parameter() {
 				return cppcp::trys(
+					//cppcp::sup<Itr>(std::make_shared<ast::declaration_parameter>(string_type(U"xxx")))
 					cppcp::map(
 						underbar(),
-						[](const auto& ig) {
-					return std::make_shared<ast::declaration_parameter>();
-				}
+						[](auto&& ig) {
+							return std::make_shared<ast::declaration_parameter>();
+						}
 					),
 					cppcp::map(
 						identifier(),
-						[](const auto& e) {
-					return std::make_shared<ast::declaration_parameter>(e);
-				}
+						[](auto&& e) {
+							return std::make_shared<ast::declaration_parameter>(e);
+						}
 					)
 					);
 			}
@@ -1152,17 +1156,17 @@ namespace tig::magimocha {
 								cppcp::sup<Itr, std::vector<std::shared_ptr<ast::declaration_parameter>>>(std::vector<std::shared_ptr<ast::declaration_parameter>>()),
 								declaration_lambda_parameter_item(),
 								[](auto&& a, auto&& e) {
-					a.push_back(e);
-					return cppcp::accm::contd(a);
-				}
+									a.push_back(e);
+									return cppcp::accm::contd(a);
+								}
 							),
 							declaration_parameter()
-					),
+						),
 						[](auto&& e) {
-					auto&& r = std::get<0>(e);
-					r.push_back(std::get<1>(e));
-					return r;
-				}
+							auto&& r = std::get<0>(e);
+							r.push_back(std::get<1>(e));
+							return r;
+						}
 					),
 					cppcp::sup<Itr, std::vector<std::shared_ptr<ast::declaration_parameter>>>(std::vector<std::shared_ptr<ast::declaration_parameter>>())
 					);
@@ -1171,14 +1175,14 @@ namespace tig::magimocha {
 			constexpr static auto declaration_lambda() {
 				return cppcp::map(
 					cppcp::join(
-						cppcp::skip(and ()),
+						cppcp::skip(and()),
 						cppcp::skip(parenthesis_open()),
 						declaration_lambda_parameter(),
 						cppcp::skip(parenthesis_close()),
 						expression()
 					),
 					[](auto&& e) {
-						return std::make_shared<ast::declaration_function>(std::get<0>(e), std::get<1>(e));
+					return std::make_shared<ast::declaration_function>(std::get<0>(e),std::get<1>(e));
 					}
 				);
 			}
@@ -1196,6 +1200,38 @@ namespace tig::magimocha {
 				}
 				);
 			}
+			constexpr static auto operand() {
+				return expression();
+			}
+			constexpr static auto apply_function_args() {
+				return cppcp::get0(cppcp::join(
+					cppcp::skip(
+						parenthesis_open()
+					),
+					cppcp::trys(
+						cppcp::get0(cppcp::join(
+							cppcp::many(
+								cppcp::map(operand(), [](auto&& e) {return std::vector<std::shared_ptr<ast::expression>>{e}; }),
+								cppcp::get0(
+									cppcp::join(
+										cppcp::skip(comma()),
+										operand()
+									)
+								),
+								[](auto&& a, auto&& e) {
+									a.push_back(e);
+									return cppcp::accm::contd(a);
+								}
+							)
+						)),
+						cppcp::sup<Itr, std::vector<std::shared_ptr<ast::expression>>>(std::vector<std::shared_ptr<ast::expression>>())
+					),
+					cppcp::skip(
+						parenthesis_close()
+					)
+				));
+			}
+
 			struct expression_token_object
 			{
 				
@@ -1278,22 +1314,27 @@ namespace tig::magimocha {
 
 				}
 			};
+			class op_token_function_applying {
+				std::vector<std::shared_ptr<typename ast::expression>> vec_;
+			public:
+				constexpr op_token_function_applying(std::vector<std::shared_ptr<typename ast::expression>>  vec):vec_(vec) {
+
+				}
+			};
 			enum class operator_tokenizer_sw:char {
 				start, single_operator, double_operator, declation_lambda, literal_, apply_function, call_name, end
 				
 			};
-			static constexpr auto operator_tokenizer_s_op() {
 
-			}
 			static constexpr auto operator_tokenizer() {
 				using s = operator_tokenizer_sw;
-				using val_type = std::variant<op_token_single,op_token_double, std::shared_ptr<ast::expression>>;
+				using val_type = std::variant<op_token_single,op_token_double, op_token_function_applying, std::shared_ptr<ast::expression>>;
 				//std::array<operator_tokenizer_sw, 4>ar=;
-				return cppcp::state_machine_parser(
-					cppcp::sup<Itr, std::pair<std::array<operator_tokenizer_sw, 4>, std::vector<val_type>>>(
+				static auto cache= cppcp::state_machine_parser(
+					cppcp::sup<Itr, std::pair<std::vector<operator_tokenizer_sw>, std::vector<val_type>>>(
 						//start
-						std::pair<std::array<operator_tokenizer_sw, 4>, std::vector<val_type>>{
-							std::array<operator_tokenizer_sw, 4>{
+						std::pair<std::vector<operator_tokenizer_sw>, std::vector<val_type>>{
+							std::vector<operator_tokenizer_sw>{
 
 								s::single_operator,
 								s::declation_lambda,
@@ -1312,8 +1353,8 @@ namespace tig::magimocha {
 						cppcp::map(
 							declaration_lambda(),
 							[](auto&& e) {
-								return std::pair<std::array<operator_tokenizer_sw, 3>, val_type> {
-									std::array<operator_tokenizer_sw, 3>{
+								return std::pair<std::vector<operator_tokenizer_sw>, val_type> {
+									std::vector<operator_tokenizer_sw>{
 										s::apply_function,
 										s::double_operator,
 										s::end
@@ -1327,8 +1368,8 @@ namespace tig::magimocha {
 						cppcp::map(
 							op(),
 							[](auto&& e) {
-								return std::pair<std::array<operator_tokenizer_sw, 3>, val_type> {
-									std::array<operator_tokenizer_sw, 3>{
+								return std::pair<std::vector<operator_tokenizer_sw>, val_type> {
+									std::vector<operator_tokenizer_sw>{
 										s::literal_,
 										s::declation_lambda,
 										s::call_name
@@ -1341,30 +1382,76 @@ namespace tig::magimocha {
 					),
 					cppcp::branch::value_with(s::apply_function,
 						cppcp::map(
-							apply_function(),
+							apply_function_args(),
 							[](auto&& e) {
-								return std::pair<std::array<operator_tokenizer_sw, 3>, val_type> {
-									std::array<operator_tokenizer_sw, 3>{
+								return std::pair<std::vector<operator_tokenizer_sw>, val_type> {
+									std::vector<operator_tokenizer_sw>{
 										s::double_operator,
 										s::apply_function,
 										s::end
 									},
-									val_type(std::static_pointer_cast<ast::expression>(e) )
+									val_type(op_token_function_applying(e))
+								};
+							}
+						)
+					),
+					cppcp::branch::value_with(s::literal_,
+						cppcp::map(
+							literal_(),
+							[](auto&& e) {
+								return std::pair<std::vector<operator_tokenizer_sw>, val_type> {
+									std::vector<operator_tokenizer_sw>{
+										s::double_operator,
+										s::end
+									},
+									val_type(std::static_pointer_cast<ast::expression>(e))
+								};
+							}
+						)
+					),
+					cppcp::branch::value_with(s::double_operator,
+						cppcp::map(
+							op(),
+							[](auto&& e) {
+								return std::pair<std::vector<operator_tokenizer_sw>, val_type> {
+									std::vector<operator_tokenizer_sw>{
+										s::literal_,
+										s::declation_lambda,
+										s::call_name
+									},
+									val_type(op_token_double{ e })
+								};
+							}
+						)
+					),
+					cppcp::branch::value_with(s::call_name,
+						cppcp::map(
+							call_name(),
+							[](auto&& e) {
+								return std::pair<std::vector<operator_tokenizer_sw>, val_type> {
+									std::vector<operator_tokenizer_sw>{
+										s::apply_function,
+										s::double_operator,
+										s::end
+									},
+									val_type(std::static_pointer_cast<ast::expression>(e))
 								};
 							}
 						)
 					),
 					cppcp::branch::end_with(s::end)
 				);
+				return cppcp::lazy([=]() {return cache; });
 			}
 			static constexpr auto expression() {
-				return cppcp::map(
-					cppcp::expression_right(
+				return cppcp::sup<Itr>(
+					std::static_pointer_cast<ast::expression>(std::make_shared<ast::call_name>(U"x"))
+					/*cppcp::expression_right(
 						literal_(),op()
 					),
 					[](auto&& e) {
 						return processing_expression_tree(std::move(e));
-					}
+					}*/
 				);
 			}
 			static constexpr std::shared_ptr<typename ast::expression> processing_expression_tree(

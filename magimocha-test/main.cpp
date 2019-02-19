@@ -15,7 +15,7 @@ struct src {
 	using difference_type = typename std::iterator_traits<Iterator>::difference_type;
 	using pointer = typename std::iterator_traits<Iterator>::pointer;
 	using reference = typename std::iterator_traits<Iterator>::reference;
-	constexpr auto isEnd() {
+	constexpr auto is_end() {
 		return it_ == end_;
 	}
 	const value_type& operator*() noexcept { return *it_; }

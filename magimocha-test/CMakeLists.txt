@@ -17,3 +17,4 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 include(GoogleTest)
 
 add_test(NAME magimocha-test COMMAND magimocha-test)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stack:2700000")	
