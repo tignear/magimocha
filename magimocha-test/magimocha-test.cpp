@@ -310,35 +310,36 @@ TEST(MagiMocha, declation_name) {
 	std::u32string s = U"xyz//";
 
 	auto p = x::declaration_name();
-	EXPECT_EQ(p(src{ cbegin(s),cend(s) }).get()->name(), ast::declaration_name(U"xyz").name());
+	EXPECT_EQ(p(src{ cbegin(s),cend(s) }).get()->name(), U"xyz");
 }
 
 TEST(MagiMocha, declation_lambda_arg2) {
 	using namespace std::string_literals;
-	std::u32string s = U"&(x,y)";
+	std::u32string s = U"&(x,y)1+1";
 
 	auto p = x::declaration_lambda();
-	auto r = std::get<0>(p(src{ cbegin(s),cend(s) }).get());
+	auto r = p(src{ cbegin(s),cend(s) }).get()->params();
 	EXPECT_EQ(r.at(0)->name(),U"x" );
 	EXPECT_EQ(r.at(1)->name(), U"y");
 }
 TEST(MagiMocha, declation_lambda_arg_0) {
 	using namespace std::string_literals;
-	std::u32string s = U"&()";
+	std::u32string s = U"&()1+1";
 
 	auto p = x::declaration_lambda();
-	EXPECT_TRUE(std::get<0>(p(src{ cbegin(s),cend(s) }).get()).empty());
+	EXPECT_TRUE(p(src{ cbegin(s),cend(s) }).get()->params().empty());
 
 }
 TEST(MagiMocha, declation_lambda_arg_ignore) {
 	using namespace std::string_literals;
-	std::u32string s = U"&(_,_)";
+	std::u32string s = U"&(_,_)1+1";
 
 	auto p = x::declaration_lambda();
-	auto r = std::get<0>(p(src{ cbegin(s),cend(s) }).get());
+	auto r = p(src{ cbegin(s),cend(s) }).get();
+	auto pa=r->params();
 
-	EXPECT_EQ(r.at(0)->name(),std::nullopt);
-	EXPECT_EQ(r.at(1)->name(), std::nullopt);
+	EXPECT_EQ(pa.at(0)->name(),std::nullopt);
+	EXPECT_EQ(pa.at(1)->name(), std::nullopt);
 }
 TEST(MagiMocha, declaration_lambda_bad) {
 	using namespace std::string_literals;
@@ -356,11 +357,32 @@ TEST(MagiMocha, declaration_lambda_bad2) {
 	EXPECT_THROW(p(src{ cbegin(s),cend(s) }).get(), tig::magimocha::unexpected_token_exception);
 
 }
+/*TEST(MagiMocha, operation) {
+	using namespace std::string_literals;
+	std::u32string s = U"1+1";
+
+	auto p = x::operation();
+	EXPECT_EQ(
+		std::dynamic_pointer_cast<ast::call_name>(
+			std::dynamic_pointer_cast<ast::apply_function>(p(src{ cbegin(s),cend(s) }).get())->target()
+		)->value(),U"+" 
+	);
+
+}*/
 TEST(MagiMocha, expression) {
 	using namespace std::string_literals;
-	std::u32string s = U"&(0x,x)";
+	std::u32string s = U"1+1*2**9/6";
 
 	auto p = x::expression();
-	EXPECT_THROW(p(src{ cbegin(s),cend(s) }).get(), tig::magimocha::unexpected_token_exception);
+	auto r = p(src{ cbegin(s),cend(s) }).get();
+	EXPECT_TRUE(true);
+}
 
+TEST(MagiMocha, operator_tokenizer) {
+	using namespace std::string_literals;
+	std::u32string s = U"1+1*2**9/6";
+
+	auto p = x::operator_tokenizer();
+	auto r = p(src{ cbegin(s),cend(s) }).get();
+	EXPECT_TRUE(true);
 }
