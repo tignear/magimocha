@@ -1,8 +1,9 @@
 ﻿#pragma once
 #include <array>
 #include <string>
-#include <stack>
 #include <cppcp.h>
+#include <list>
+#include "ast.h"
 namespace tig::magimocha {
 	static_assert(-std::numeric_limits<int>::max()!=std::numeric_limits<int>::min(),"Not the two's complement representation.");
 	class magimocha_parser_exception :public cppcp::parser_exception {
@@ -11,7 +12,8 @@ namespace tig::magimocha {
 	class unexpected_token_exception :public magimocha_parser_exception {
 
 	};
-	namespace rawast{
+	
+	namespace parser{
 		using cppcp::either;
 		using cppcp::left;
 		using cppcp::right;
@@ -88,167 +90,15 @@ namespace tig::magimocha {
 				return std::stod(s,idx);
 			}
 		}
-		template<class char_type>
-		struct ast_ns {
-			using string_type = std::basic_string<char_type>;
-			constexpr ast_ns() {
 
-			}
-			struct ast_base {
-				virtual ~ast_base(){}
-			};
-			struct expression :public ast_base {
 
-			};
-			class declaration_name :public ast_base {
-				string_type name_;
-			public:
-				constexpr declaration_name(const string_type& name) :name_(name) {
 
-				}
 
-				constexpr const string_type& name()const {
-					return name_;
-				}
-
-			};
-			class declaration_parameter :public ast_base {
-				std::optional<string_type> name_;
-			public:
-				constexpr declaration_parameter(const string_type& name) :name_(name) {
-
-				}
-				constexpr declaration_parameter() : name_(std::nullopt) {
-
-				}
-				constexpr declaration_parameter(std::optional<string_type> s) : name_(s) {
-
-				}
-				~declaration_parameter() {
-					name_ = std::nullopt;
-				}
-				constexpr const std::optional<string_type> name()const {
-					return name_;
-				}
-				constexpr bool is_ignore_parameter() {
-					return !name_;
-				}
-			};
-			
-			class declaration_function :public expression {
-				std::vector<std::shared_ptr<declaration_parameter>> params_;
-				std::shared_ptr<expression> body_;
-			public:
-				constexpr declaration_function(
-					std::vector<std::shared_ptr<declaration_parameter>> params,
-					std::shared_ptr<expression> body
-				):params_(params),body_(body) {
-
-				}
-				const std::vector<std::shared_ptr<declaration_parameter>>& params() {
-					return params_;
-				}
-				const std::shared_ptr<expression>& body() {
-					return body_;
-				}
-			};
-			struct literal_ :public expression {
-
-			};
-			struct numeric_literal :public literal_ {
-			};
-			struct integer_literal :public numeric_literal {
-
-			};
-
-			class signed_number_literal :public integer_literal {
-				std::int64_t value_;
-			public:
-				constexpr signed_number_literal(const  std::int64_t value) :value_(value) {
-
-				}
-				constexpr const std::int64_t value()const {
-					return value_;
-				}
-			};
-			class unsigned_number_literal :public integer_literal {
-				std::uint64_t value_;
-			public:
-				constexpr unsigned_number_literal(const  std::uint64_t value) :value_(value) {
-
-				}
-				constexpr const std::uint64_t value()const {
-					return value_;
-				}
-				constexpr const std::int64_t signed_p()const {
-					if (static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) >= value_) {
-						return value_;
-					}
-					throw std::invalid_argument("");
-
-				}
-				constexpr const std::int64_t signed_n()const {
-					if (static_cast<uint64_t>(std::numeric_limits<int64_t>::max())+1>= value_) {
-						return -static_cast<int64_t>(value_);
-					}
-					throw std::invalid_argument("");
-				}
-			};
-			class floating_literal :public numeric_literal {
-				double value_;
-			public:
-				constexpr floating_literal(double value) :value_(value) {
-
-				}
-				constexpr const double value()const {
-					return value_;
-				}
-				
-			};
-			class string_literal :public literal_ {
-				std::u32string value_;
-			public:
-				constexpr string_literal(const std::u32string& value) :value_(value) {
-
-				}
-				constexpr const std::u32string& value()const {
-					return value_;
-				}
-			};
-			class apply_function:public expression {
-				std::shared_ptr<expression> target_;
-				std::vector< std::shared_ptr<expression>> args_;
-			public:
-				constexpr apply_function(std::shared_ptr<expression> target, std::vector<std::shared_ptr<expression>> args):target_(target),args_(args) {
-
-				}
-				constexpr const auto& target() {
-					return target_;
-				}
-				constexpr const auto& args() {
-					return args_;
-				}
-			};
-			struct call_name:public expression {
-				std::u32string value_;
-				constexpr call_name(const std::u32string& value) :value_(value) {
-
-				}
-				constexpr const std::u32string& value()const {
-					return value_;
-				}
-			};
-			/*
-			*
-			*/
-
-		};
 		template<class Itr>
 		struct p {
 
 			using char_type = typename Itr::value_type;
 			using string_type = std::basic_string<char_type>;
-			using ast = ast_ns<char_type>;
 
 
 
@@ -929,58 +779,65 @@ namespace tig::magimocha {
 			constexpr static auto identifier_head() {
 				static const constexpr auto block = impl::unicodeBlock<decltype(anyc())>;
 				static const constexpr auto single = impl::unicodeChar<decltype(anyc())>;
-				return cppcp::trys(
-					block(anyc(), U'A', U'Z'),
-					block(anyc(), U'a', U'z'),
-					single(anyc(), 0x00A8),
-					single(anyc(), 0x00AA),
-					single(anyc(), 0x00AD),
-					single(anyc(), 0x00AF),
-					block(anyc(), 0x00B2, 0x00B5),
-					block(anyc(), 0x00B7, 0x00BA),
-					block(anyc(), 0x00BC, 0x00BE),
-					block(anyc(), 0x00C0, 0x00D6),
-					block(anyc(), 0x00D8, 0x00F6),
-					block(anyc(), 0x00F8, 0x00FF),
-					block(anyc(), 0x0100, 0x02FF),
-					block(anyc(), 0x0370, 0x167F),
-					block(anyc(), 0x1681, 0x180D),
-					block(anyc(), 0x180F, 0x1DBF),
-					block(anyc(), 0x1E00, 0x1FFF),
-					block(anyc(), 0x200B, 0x200D),
-					block(anyc(), 0x202A, 0x202E),
-					block(anyc(), 0x203F, 0x2040),
-					single(anyc(), 0x2054),
-					block(anyc(), 0x2060, 0x206F),
-					block(anyc(), 0x2070, 0x20CF),
-					block(anyc(), 0x2100, 0x218F),
-					block(anyc(), 0x2460, 0x24FF),
-					block(anyc(), 0x2776, 0x2793),
-					block(anyc(), 0x2C00, 0x2DFF),
-					block(anyc(), 0x2E80, 0x2FFF),
-					block(anyc(), 0x3004, 0x3007),
-					block(anyc(), 0x3021, 0x302F),
-					block(anyc(), 0x3031, 0x303F),
-					block(anyc(), 0x3040, 0xD7FF),
-					block(anyc(), 0xF900, 0xFD3D),
-					block(anyc(), 0xFD40, 0xFDCF),
-					block(anyc(), 0xFDF0, 0xFE1F),
-					block(anyc(), 0xFE30, 0xFE44),
-					block(anyc(), 0xFE47, 0xFFFD),
-					block(anyc(), 0x10000, 0x1FFFD),
-					block(anyc(), 0x20000, 0x2FFFD),
-					block(anyc(), 0x30000, 0x3FFFD),
-					block(anyc(), 0x40000, 0x4FFFD),
-					block(anyc(), 0x50000, 0x5FFFD),
-					block(anyc(), 0x60000, 0x6FFFD),
-					block(anyc(), 0x70000, 0x7FFFD),
-					block(anyc(), 0x80000, 0x8FFFD),
-					block(anyc(), 0x90000, 0x9FFFD),
-					block(anyc(), 0xA0000, 0xAFFFD),
-					block(anyc(), 0xB0000, 0xBFFFD),
-					block(anyc(), 0xC0000, 0xCFFFD),
-					block(anyc(), 0xD0000, 0xDFFFD),
-					block(anyc(), 0xE0000, 0xEFFFD)
+				//何故かMSVCでSEHが出るので回避
+				return
+					cppcp::trys(
+						cppcp::trys(
+							block(anyc(), U'A', U'Z'),
+							block(anyc(), U'a', U'z'),
+							single(anyc(), 0x00A8),
+							single(anyc(), 0x00AA),
+							single(anyc(), 0x00AD),
+							single(anyc(), 0x00AF),
+							block(anyc(), 0x00B2, 0x00B5),
+							block(anyc(), 0x00B7, 0x00BA),
+							block(anyc(), 0x00BC, 0x00BE),
+							block(anyc(), 0x00C0, 0x00D6),
+							block(anyc(), 0x00D8, 0x00F6),
+							block(anyc(), 0x00F8, 0x00FF),
+							block(anyc(), 0x0100, 0x02FF),
+							block(anyc(), 0x0370, 0x167F),
+							block(anyc(), 0x1681, 0x180D),
+							block(anyc(), 0x180F, 0x1DBF),
+							block(anyc(), 0x1E00, 0x1FFF),
+							block(anyc(), 0x200B, 0x200D),
+							block(anyc(), 0x202A, 0x202E),
+							block(anyc(), 0x203F, 0x2040),
+							single(anyc(), 0x2054),
+							block(anyc(), 0x2060, 0x206F),
+							block(anyc(), 0x2070, 0x20CF),
+							block(anyc(), 0x2100, 0x218F),
+							block(anyc(), 0x2460, 0x24FF),
+							block(anyc(), 0x2776, 0x2793),
+							block(anyc(), 0x2C00, 0x2DFF),
+							block(anyc(), 0x2E80, 0x2FFF),
+							block(anyc(), 0x3004, 0x3007),
+							block(anyc(), 0x3021, 0x302F),
+							block(anyc(), 0x3031, 0x303F),
+							block(anyc(), 0x3040, 0xD7FF)
+						),
+						cppcp::trys(
+							block(anyc(), 0xF900, 0xFD3D),
+							block(anyc(), 0xFD40, 0xFDCF),
+							block(anyc(), 0xFDF0, 0xFE1F),
+							block(anyc(), 0xFE30, 0xFE44),
+							block(anyc(), 0xFE47, 0xFFFD),
+							block(anyc(), 0x10000, 0x1FFFD),
+							block(anyc(), 0x20000, 0x2FFFD),
+							block(anyc(), 0x30000, 0x3FFFD),
+							block(anyc(), 0x40000, 0x4FFFD),
+							block(anyc(), 0x50000, 0x5FFFD),
+							block(anyc(), 0x60000, 0x6FFFD),
+							block(anyc(), 0x70000, 0x7FFFD),
+							block(anyc(), 0x80000, 0x8FFFD),
+							block(anyc(), 0x90000, 0x9FFFD),
+							block(anyc(), 0xA0000, 0xAFFFD),
+							block(anyc(), 0xB0000, 0xBFFFD),
+							block(anyc(), 0xC0000, 0xCFFFD),
+							block(anyc(), 0xD0000, 0xDFFFD),
+							block(anyc(), 0xE0000, 0xEFFFD)
+						)
+
 				);
 			}
 			constexpr static auto identifier_character() {
@@ -1295,60 +1152,114 @@ namespace tig::magimocha {
 			/*enum class op_token_type {
 				one,two
 			};*/
-			class op_token_double {
-				
-				std::shared_ptr<typename ast::call_name> s_;
-			public:
-				constexpr op_token_double(std::shared_ptr<typename ast::call_name> s):s_(s) {
 
-				}
-				
-				constexpr unsigned int priority()const {
-					return 0;
-				}
-			};
-			class op_token_single {
-				std::shared_ptr<typename ast::call_name> s_;
-			public:
-				constexpr op_token_single(std::shared_ptr<typename ast::call_name> s) :s_(s) {
-
-				}
-			};
-			class op_token_function_applying {
-				std::vector<std::shared_ptr<typename ast::expression>> vec_;
-			public:
-				constexpr op_token_function_applying(std::vector<std::shared_ptr<typename ast::expression>>  vec):vec_(vec) {
-
-				}
-			};
 			enum class operator_tokenizer_sw:char {
-				start, single_operator, double_operator, declation_lambda, literal_, apply_function, call_name, end
+				start, single_operator, double_operator, declation_lambda, literal_, apply_function, call_name,expression_block,named_function, end
 				
 			};
+			static constexpr auto expression_block() {
+				return cppcp::trys(
+					cppcp::get0(cppcp::join(cppcp::skip(parenthesis_open()), expression(), cppcp::skip(parenthesis_close()))),
+					cppcp::map(
+						cppcp::get0(
+							cppcp::join(
+								cppcp::skip(braces_open()),
+								cppcp::many(
+									cppcp::map(expression(), [](auto&& e) {return std::vector<std::shared_ptr<ast::expression>>{e}; }),
+									cppcp::join(
+										cppcp::skip(
+											cppcp::trys(
+												line_break(),
+												c2s(comma())
+											)
+										),
+										expression()
+									),
+									[](auto&& a,auto&& e) {
+										a.push_back(std::get<0>(e));
+										return cppcp::accm::contd(a);
+									}
+								), 
+								cppcp::skip(braces_close())
+							)
+						),
+						[](auto&& e) {
+							return std::static_pointer_cast<ast::expression>(std::make_shared<ast::expression_block>(std::move(e)));
+						}
+					)
+				);
+			}
 
 			static constexpr auto operator_tokenizer() {
 				using s = operator_tokenizer_sw;
-				using val_type = std::variant<op_token_single,op_token_double, op_token_function_applying, std::shared_ptr<ast::expression>>;
-				//std::array<operator_tokenizer_sw, 4>ar=;
+				using val_type = ast::operator_token_type;
 				static auto cache= cppcp::state_machine_parser(
-					cppcp::sup<Itr, std::pair<std::vector<operator_tokenizer_sw>, std::vector<val_type>>>(
+					cppcp::sup<Itr, std::pair<std::vector<operator_tokenizer_sw>, std::list<val_type>>>(
 						//start
-						std::pair<std::vector<operator_tokenizer_sw>, std::vector<val_type>>{
+						std::pair<std::vector<operator_tokenizer_sw>, std::list<val_type>>{
 							std::vector<operator_tokenizer_sw>{
-
 								s::single_operator,
 								s::declation_lambda,
+								s::named_function,
 								s::call_name,
-								s::literal_
-
+								s::literal_,
+								s::expression_block
 							},
-							std::vector<val_type>()
+							std::list<val_type>()
 						}
 					),
 					[](auto&& a,auto&&, auto&&e) {
 						a.push_back(e);
 						return cppcp::accm::contd(a);
 					},
+					cppcp::branch::value_with(s::named_function,
+						cppcp::map(
+							cppcp::map(
+								cppcp::join(
+									cppcp::skip(impl::unicodeChar(anyc(),U'd')),
+									cppcp::skip(impl::unicodeChar(anyc(),U'e')),
+									cppcp::skip(impl::unicodeChar(anyc(),U'f')),
+									cppcp::skip(whitespace()),
+									cppcp::many(
+										cppcp::sup<Itr,string_type>(string_type{}),
+										anyc(),
+										[](auto&& a,auto && e) {
+											if (e == U'(') {
+												return cppcp::accm::terminate(a);
+											}
+											a.push_back(e);
+											return cppcp::accm::contd(a);
+										}
+									),
+									declaration_lambda_parameter(),
+									cppcp::skip(parenthesis_close()),
+									cppcp::skip(cppcp::option(whitespace())),
+									cppcp::skip(equal()),
+									expression()
+								),
+								[](auto&& e){
+									auto name = std::get<0>(e);
+									auto param = std::get<1>(e);
+									auto expr = std::get<2>(e);
+									auto df= std::make_shared<ast::declaration_function>(param, expr);
+									if (name.empty()) {
+										return std::static_pointer_cast<ast::expression>(df);
+									}
+									return std::static_pointer_cast<ast::expression>(std::make_shared<ast::named_function>(name,df));
+								}
+							),
+							[](auto&& e) {
+								return std::pair<std::vector<operator_tokenizer_sw>, val_type>{
+									std::vector<operator_tokenizer_sw>{
+										s::apply_function,
+										s::double_operator,
+										s::end
+									},
+									val_type(e)
+								};
+							}
+						)
+					),
 					cppcp::branch::value_with(s::declation_lambda,
 						cppcp::map(
 							declaration_lambda(),
@@ -1359,7 +1270,7 @@ namespace tig::magimocha {
 										s::double_operator,
 										s::end
 									},
-									val_type(std::static_pointer_cast<ast::expression>(e))
+									val_type(e)
 								};
 							}
 						)
@@ -1372,9 +1283,11 @@ namespace tig::magimocha {
 									std::vector<operator_tokenizer_sw>{
 										s::literal_,
 										s::declation_lambda,
-										s::call_name
+										s::named_function,
+										s::call_name,
+										s::expression_block
 									},
-									val_type(op_token_single{ e })
+									val_type(ast::op_token_single{ e })
 								};
 							}
 						)
@@ -1390,7 +1303,7 @@ namespace tig::magimocha {
 										s::apply_function,
 										s::end
 									},
-									val_type(op_token_function_applying(e))
+									val_type(ast::op_token_function_applying(e))
 								};
 							}
 						)
@@ -1404,7 +1317,7 @@ namespace tig::magimocha {
 										s::double_operator,
 										s::end
 									},
-									val_type(std::static_pointer_cast<ast::expression>(e))
+									val_type(e)
 								};
 							}
 						)
@@ -1417,9 +1330,11 @@ namespace tig::magimocha {
 									std::vector<operator_tokenizer_sw>{
 										s::literal_,
 										s::declation_lambda,
-										s::call_name
+										s::named_function,
+										s::call_name,
+										s::expression_block
 									},
-									val_type(op_token_double{ e })
+									val_type(ast::op_token_double{ e })
 								};
 							}
 						)
@@ -1434,7 +1349,22 @@ namespace tig::magimocha {
 										s::double_operator,
 										s::end
 									},
-									val_type(std::static_pointer_cast<ast::expression>(e))
+									val_type(e)
+								};
+							}
+						)
+					),
+					cppcp::branch::value_with(s::expression_block,
+						cppcp::map(
+							expression_block(),
+							[](auto&& e) {
+								return std::pair<std::vector<operator_tokenizer_sw>, val_type>{
+									std::vector<operator_tokenizer_sw>{
+										s::apply_function,
+										s::double_operator,
+										s::end
+									},
+									val_type(e)
 								};
 							}
 						)
@@ -1443,18 +1373,21 @@ namespace tig::magimocha {
 				);
 				return cppcp::lazy([=]() {return cache; });
 			}
-			static constexpr auto expression() {
-				return cppcp::sup<Itr>(
-					std::static_pointer_cast<ast::expression>(std::make_shared<ast::call_name>(U"x"))
-					/*cppcp::expression_right(
-						literal_(),op()
-					),
-					[](auto&& e) {
-						return processing_expression_tree(std::move(e));
-					}*/
+			static constexpr cppcp::type_eraser<Itr, std::shared_ptr<typename ast::operation>> expression() {
+				return cppcp::lazy(
+					[]() {
+						return cppcp::map(
+							operator_tokenizer(),
+							[](auto&& e) {
+								return std::make_shared<ast::operation>(std::move(e));
+								//return processing_double_operator(processing_single_operator(processing_apply_function(std::move(e))));
+							}
+						); 
+					}
 				);
 			}
-			static constexpr std::shared_ptr<typename ast::expression> processing_expression_tree(
+			
+			/*static constexpr std::shared_ptr<typename ast::expression> processing_expression_tree(
 				cppcp::node<
 					std::shared_ptr<typename ast::call_name>,
 					std::shared_ptr<typename ast::literal_>
@@ -1470,7 +1403,7 @@ namespace tig::magimocha {
 				default:
 					throw std::invalid_argument("unexpected type value");
 				}
-			}
+			}*/
 		};
 	}
 }

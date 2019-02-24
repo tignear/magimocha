@@ -11,10 +11,10 @@ download_project(PROJ googletest
 
 add_executable(magimocha-test "magimocha-test.cpp")
 
-target_link_libraries(magimocha-test gtest_main magimocha)
+target_link_libraries(magimocha-test gtest_main magimocha-ast)
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
 include(GoogleTest)
 
 add_test(NAME magimocha-test COMMAND magimocha-test)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stack:2700000")	
+#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stack:2700000")	

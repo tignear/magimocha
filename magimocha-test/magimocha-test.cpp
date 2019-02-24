@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "magimocha.h"
+#include "magimocha/parser.h"
 template<typename Iterator>
 struct src {
 	Iterator it_;
@@ -39,8 +39,8 @@ struct src {
 	}
 };
 using u32src = src<std::u32string::const_iterator>;
-using x = tig::magimocha::rawast::p<u32src>;
-using ast = x::ast;
+using x = tig::magimocha::parser::p<u32src>;
+namespace ast = tig::magimocha::ast;
 TEST(MagiMocha, anyc) {
 	const std::u32string u32 = U"xyz";
 
@@ -376,7 +376,8 @@ TEST(MagiMocha, expression) {
 
 	auto p = x::expression();
 	auto r = p(src{ cbegin(s),cend(s) }).get();
-	EXPECT_TRUE(true);
+	EXPECT_TRUE(r->type()==ast::leaf_type::apply_function);
+
 }
 
 TEST(MagiMocha, operator_tokenizer) {

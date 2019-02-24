@@ -11,5 +11,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 project ("magimocha-distribution")
 
 # サブプロジェクトを含めます。
-add_subdirectory ("magimocha")
+add_subdirectory ("magimocha-ast")
+add_subdirectory ("magimocha-llvm")
 add_subdirectory ("magimocha-test")
