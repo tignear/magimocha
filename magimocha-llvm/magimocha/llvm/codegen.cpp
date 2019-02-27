@@ -1,6 +1,7 @@
 #include "magimocha/parser.h"
 #include "magimocha/ast-visitor.h"
 #include "codegen.h"
+#include "visitor.h"
 #include <iostream>
 
 template<typename Iterator>
@@ -47,24 +48,76 @@ using p = tig::magimocha::parser::p<u32src>;
 namespace ast = tig::magimocha::ast;
 namespace codegen=tig::magimocha::codegen;
 namespace tig::magimocha::codegen {
-	llvm::Value* process(std::shared_ptr<Scope> s, std::shared_ptr<ast::expression> expr) {
-		visitor v{ s };
+	llvm::Value* process_expression(Scope* s, std::shared_ptr<ast::expression> expr) {
+		expression_visitor v{ s };
+		return process_expression(v,s, expr);
+	}
+	llvm::Value* process_expression(expression_visitor& v, Scope* s, std::shared_ptr<ast::expression> expr) {
+		struct visitor_extract_named_fn {
+			Scope* s;
+			std::monostate visit(std::shared_ptr<ast::named_function> n) {
+				auto& params = n->body()->params();
+
+				std::vector<llvm::Type*> Doubles(params.size(), llvm::Type::getDoubleTy(TheContext));
+				llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getDoubleTy(TheContext), Doubles, false);
+
+				llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, to_string(n->name()), s->getLLVMModule());
+				std::unordered_map<string_type, VariableInfo> variables;
+				auto farg = F->arg_begin();
+				{
+					for (auto param = begin(params); param != end(params);) {
+
+						if ((*param)->name()) {
+							farg->setName(to_string((*param)->name().value()));
+							variables[(*param)->name().value()] = VariableInfo{
+								[farg](Scope*,std::shared_ptr<ast::call_name>) {
+									return farg;
+								}
+							};
+						}
+						++farg;
+						++param;
+					}
+				}
+				auto fscope = FunctionScope::create(s, F, std::move(variables));
+				s->addFunctionInfo(
+					s,
+					n->name(),
+					FunctionInfoThisScope{
+						[F](auto,auto)->llvm::Value* {
+							return F;
+						},
+						fscope
+					}
+				);
+				return std::monostate{};
+			}
+			std::monostate visit(std::shared_ptr<ast::expression> n) {
+				return std::monostate{};
+			}
+		};
+		ast::visit<std::monostate>(visitor_extract_named_fn{s},expr);
 		return ast::visit<llvm::Value*>(v, expr);
 	}
-	llvm::Value* process(visitor& v,std::shared_ptr<ast::expression> expr) {
-		
-		return ast::visit<llvm::Value*>(v, expr);
+	void process_module(Scope* s, std::shared_ptr<ast::module_member> mod) {
+		auto v=module_visitor{ s };
+		process_module(v, s, mod);
+	}
+	void process_module(module_visitor& v, Scope* s, std::shared_ptr<ast::module_member> mod) {
+		ast::visit<std::nullptr_t>(v, mod);
 	}
 }
 
 int main() {
 
 	//std::u32string s = U"def aaa(a,c)=(def b()=0.0)()";
-	std::u32string s = U"def add(a,b)=a+b";
-	auto gscope = codegen::GlobalScope::create();
-	auto ast = p::expression()(u32src(cbegin(s), cend(s))).get();
-	process(gscope,ast);
-	
-	gscope->getLLVMModule()->print(llvm::errs(),nullptr);
+	std::u32string s = U"module a{def add(a,b)=a+b\ndef sub(a,b)=a-b}";
+	auto gscope = codegen::GlobalScope::create(codegen::PreludeScope::create());
+	auto ast = p::module_p()(u32src(cbegin(s), cend(s)));
+	std::shared_ptr<ast::declaration_module> m = ast.get();
+	std::cout << reinterpret_cast<uintptr_t>(m.get());
+	//process(gscope,ast.get());
+	//process(gscope,p::expression()(ast.itr()).get());
+	//gscope->getLLVMModule()->print(llvm::errs(),nullptr);
 	system("pause");
 }

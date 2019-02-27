@@ -2,7 +2,7 @@
 #include "ast.h"
 #include <memory>
 namespace tig::magimocha::ast {
-	template<class R,class Visitor>
+	/*template<class R,class Visitor>
 	static constexpr R visit(Visitor& v,std::shared_ptr<typename ast_base> node) {
 		switch (node->type()) {
 		case leaf_type::declaration_name:
@@ -31,7 +31,7 @@ namespace tig::magimocha::ast {
 			return v.visit(std::static_pointer_cast<named_function>(node));
 		}
 		throw std::invalid_argument("");
-	}
+	}*/
 	template<class R, class Visitor>
 	static constexpr R visit(Visitor& v, std::shared_ptr<typename expression> node) {
 		switch (node->type()) {
@@ -57,6 +57,23 @@ namespace tig::magimocha::ast {
 			return v.visit(std::static_pointer_cast<expression_block>(node));
 		case leaf_type::operation:
 			return v.visit(std::static_pointer_cast<operation>(node));
+		case leaf_type::named_function:
+			return v.visit(std::static_pointer_cast<named_function>(node));
+		case leaf_type::declaration_variable:
+			return v.visit(std::static_pointer_cast<declaration_variable>(node));
+
+		}
+		throw std::invalid_argument("");
+	}
+	template<class R, class Visitor>
+	static constexpr R visit(Visitor& v, std::shared_ptr<module_member> node) {
+		switch (node->type()) {
+		case leaf_type::declaration_module:
+			return v.visit(std::static_pointer_cast<declaration_module>(node));
+		case leaf_type::declaration_variable:
+			return v.visit(std::static_pointer_cast<declaration_variable>(node));
+		case leaf_type::declaration_export:
+			return v.visit(std::static_pointer_cast<declaration_export>(node));
 		case leaf_type::named_function:
 			return v.visit(std::static_pointer_cast<named_function>(node));
 		}

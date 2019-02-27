@@ -18,7 +18,10 @@ namespace tig::magimocha {
 			call_name,
 			expression_block,
 			operation,
-			named_function
+			named_function,
+			declaration_module,
+			declaration_variable,
+			declaration_export
 		};
 		using char_type = char32_t;
 		using string_type = std::basic_string<char_type>;
@@ -30,6 +33,8 @@ namespace tig::magimocha {
 		struct expression :public ast_base {
 
 		};
+		struct module_member :public ast_base {};
+
 		class declaration_name final :public ast_base {
 			string_type name_;
 
@@ -41,7 +46,7 @@ namespace tig::magimocha {
 
 			}
 
-			 const string_type& name()const {
+			 const string_type& value()const {
 				return name_;
 			}
 
@@ -70,7 +75,7 @@ namespace tig::magimocha {
 			}
 		};
 		
-		class declaration_function final :public expression {
+		class declaration_function final :public expression,public module_member{
 			std::vector<std::shared_ptr<declaration_parameter>> params_;
 			std::shared_ptr<expression> body_;
 		public:
@@ -90,7 +95,7 @@ namespace tig::magimocha {
 				return body_;
 			}
 		};
-		class named_function final:public expression {
+		class named_function final:public expression,public module_member {
 			string_type name_;
 			std::shared_ptr<declaration_function> body_;
 		public:
@@ -292,6 +297,52 @@ namespace tig::magimocha {
 				return op_;
 			}
 		};
+		class declaration_module final:public  module_member {
+			std::vector<std::shared_ptr<module_member>> members_;
+			string_type name_;
+		public:
+			declaration_module(const string_type& name,std::vector<std::shared_ptr<module_member>>&& members):name_(name),members_(members) {
 
+			}
+			leaf_type type()override {
+				return leaf_type::declaration_module;
+			}
+			std::vector<std::shared_ptr<module_member>>&  members() {
+				return members_;
+			}
+			const string_type& name(){
+				return name_;
+			}
+		};
+		class declaration_variable final :public expression, public module_member {
+			std::shared_ptr<declaration_name> name_;
+			std::shared_ptr<expression> body_;
+		public:
+			declaration_variable(std::shared_ptr<declaration_name> name, std::shared_ptr<expression> body):name_(name),body_(body) {
+
+			}
+			leaf_type type()override {
+				return leaf_type::declaration_variable;
+			}
+			std::shared_ptr<declaration_name> name() {
+				return name_;
+			}
+			std::shared_ptr<expression> body() {
+				return body_;
+			}
+		};
+		class declaration_export final :public module_member {
+			std::vector<string_type> targets_;
+			std::vector<string_type> to_;
+			declaration_export(std::vector<string_type>&& targets, std::vector<string_type>&& to) :targets_(targets), to_(to) {
+
+			}
+			std::vector<string_type>& targets() {
+				return targets_;
+			}
+			std::vector<string_type>& to() {
+				return to_;
+			}
+		};
 	};
 }

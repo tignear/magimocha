@@ -1386,7 +1386,79 @@ namespace tig::magimocha {
 					}
 				);
 			}
-			
+			static constexpr auto named_function_module_scope() {
+				return cppcp::map(
+					cppcp::join(
+						cppcp::skip(impl::unicodeChar(anyc(), U'd')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'e')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'f')),
+						cppcp::skip(whitespace()),
+						cppcp::many(
+							cppcp::sup<Itr, string_type>(string_type{}),
+							anyc(),
+							[](auto&& a, auto && e) {
+								if (e == U'(') {
+									return cppcp::accm::terminate(a);
+								}
+								a.push_back(e);
+								return cppcp::accm::contd(a);
+							}
+						),
+						declaration_lambda_parameter(),
+						cppcp::skip(parenthesis_close()),
+						cppcp::skip(cppcp::option(whitespace())),
+						cppcp::skip(equal()),
+						expression()
+					),
+					[](auto&& e)->std::shared_ptr<ast::module_member> {
+						auto name = std::get<0>(e);
+						auto param = std::get<1>(e);
+						auto expr = std::get<2>(e);
+						auto df = std::make_shared<ast::declaration_function>(param, expr);
+						if (name.empty()) {
+							throw "not allow anonymous function in module";
+						}
+						return std::make_shared<ast::named_function>(name, df);
+					}
+				);
+			}
+			static constexpr cppcp::type_eraser<Itr,std::shared_ptr<ast::module_member>> module_members_item() {
+				return cppcp::trys(
+					named_function_module_scope()
+				);
+			}
+			static constexpr auto module_members() {
+				return cppcp::many(
+					cppcp::sup<Itr>(std::vector<std::shared_ptr<ast::module_member>>{}),
+					cppcp::join(cppcp::skip(cppcp::option(whitespace())),module_members_item()),
+					[](auto&& a, auto&& e){
+						a.push_back(std::get<0>(e));
+						return cppcp::accm::contd(a);
+					}
+				);
+			}
+			static constexpr auto module_p() {
+				return cppcp::map(
+					cppcp::join(
+						cppcp::skip(impl::unicodeChar(anyc(), U'm')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'o')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'd')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'u')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'l')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'e')),
+						cppcp::skip(whitespace()),
+						identifier(),
+						cppcp::skip(braces_open()),
+						module_members(),
+						cppcp::skip(cppcp::option(whitespace())),
+						cppcp::skip(braces_close())
+					),
+					[](auto&& e) {
+					//std::vector<std::shared_ptr<ast::module_member>> vect = ;
+						return std::make_shared<ast::declaration_module>(std::get<0>(e), std::move(std::get<1>(e)));
+					}
+				);
+			}
 			/*static constexpr std::shared_ptr<typename ast::expression> processing_expression_tree(
 				cppcp::node<
 					std::shared_ptr<typename ast::call_name>,

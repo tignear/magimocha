@@ -310,7 +310,7 @@ TEST(MagiMocha, declation_name) {
 	std::u32string s = U"xyz//";
 
 	auto p = x::declaration_name();
-	EXPECT_EQ(p(src{ cbegin(s),cend(s) }).get()->name(), U"xyz");
+	EXPECT_EQ(p(src{ cbegin(s),cend(s) }).get()->value(), U"xyz");
 }
 
 TEST(MagiMocha, declation_lambda_arg2) {
