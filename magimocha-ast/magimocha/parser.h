@@ -21,7 +21,7 @@ namespace tig::magimocha {
 
 
 		namespace impl {
-
+			
 			template<class P>
 			constexpr auto unicodeBlock(P p, typename cppcp::result_type_t<P> s, typename cppcp::result_type_t<P> e) {
 				return cppcp::map(p, 
@@ -202,6 +202,12 @@ namespace tig::magimocha {
 			static constexpr auto  braces_close() {
 				return impl::unicodeChar(anyc(), U'}');
 			}
+			static constexpr auto colon() {
+				return impl::unicodeChar(anyc(), U':');
+			}
+			static constexpr auto skip_optinal_whitespace() {
+				return cppcp::skip(cppcp::option(whitespace()));
+			}
 			template<class P>
 			static constexpr auto c2s(P p) {
 				return cppcp::map(p, [](const auto& v) {
@@ -243,8 +249,8 @@ namespace tig::magimocha {
 								cppcp::map(any(), [](auto&& e) {return cppcp::accm::contd(e); })
 							),
 							[](auto&& a, auto&& e) {
-					return  std::make_pair(e.first, a + e.second);
-				}
+								return  std::make_pair(e.first, a + e.second);
+							}
 						)
 					),
 					[](const auto&e) {
@@ -307,7 +313,22 @@ namespace tig::magimocha {
 				);
 				return cache;
 			}
-
+			/*
+			type attr
+			*/
+			constexpr static auto type_attr() {
+				return cppcp::map(
+					cppcp::get0(
+						cppcp::join(
+							cppcp::skip(colon()),
+							identifier()
+						)
+					),
+					[](auto&& s) {
+						return std::make_shared<ast::simple_type_data>(s);
+					}
+				);
+			}
 			/*
 			*integer literals
 			*/
@@ -971,35 +992,49 @@ namespace tig::magimocha {
 			 * declarations
 			*/
 
-			constexpr static auto declaration_name() {
+			/*constexpr static auto declaration_name() {
 				return  cppcp::map(
 					identifier(),
 					[](auto&& e) {
 					return	std::make_shared<ast::declaration_name>(e);
 				}
 				);
-			}
+			}*/
 
 			constexpr static auto declaration_parameter() {
 				return cppcp::trys(
 					//cppcp::sup<Itr>(std::make_shared<ast::declaration_parameter>(string_type(U"xxx")))
 					cppcp::map(
-						underbar(),
-						[](auto&& ig) {
-							return std::make_shared<ast::declaration_parameter>();
+						cppcp::get0(
+							cppcp::join(
+								cppcp::skip(underbar()),
+								skip_optinal_whitespace(),
+								type_attr(),
+								skip_optinal_whitespace()
+							)
+						),
+						[](auto&& e) {
+							return std::make_shared<ast::declaration_parameter>(e);
 						}
 					),
 					cppcp::map(
-						identifier(),
+						cppcp::join(
+							identifier(),
+							skip_optinal_whitespace(),
+							type_attr(),
+							skip_optinal_whitespace()
+						),
 						[](auto&& e) {
-							return std::make_shared<ast::declaration_parameter>(e);
+							return std::make_shared<ast::declaration_parameter>(std::get<0>(e),std::get<1>(e));
 						}
 					)
 					);
 			}
 			constexpr static auto declaration_lambda_parameter_item() {
 				return cppcp::map(cppcp::join(
+					skip_optinal_whitespace(),
 					declaration_parameter(),
+					skip_optinal_whitespace(),
 					cppcp::skip(comma())
 				), [](const auto& e) {
 					return std::get<0>(e);
@@ -1017,7 +1052,9 @@ namespace tig::magimocha {
 									return cppcp::accm::contd(a);
 								}
 							),
-							declaration_parameter()
+							skip_optinal_whitespace(),
+							declaration_parameter(),
+							skip_optinal_whitespace()
 						),
 						[](auto&& e) {
 							auto&& r = std::get<0>(e);
@@ -1026,20 +1063,41 @@ namespace tig::magimocha {
 						}
 					),
 					cppcp::sup<Itr, std::vector<std::shared_ptr<ast::declaration_parameter>>>(std::vector<std::shared_ptr<ast::declaration_parameter>>())
-					);
+				);
 			}
 			
 			constexpr static auto declaration_lambda() {
 				return cppcp::map(
 					cppcp::join(
-						cppcp::skip(and()),
+						cppcp::skip(backslash()),
 						cppcp::skip(parenthesis_open()),
 						declaration_lambda_parameter(),
 						cppcp::skip(parenthesis_close()),
+						skip_optinal_whitespace(),
+						cppcp::option(type_attr()),
+						skip_optinal_whitespace(),
+						cppcp::skip(minus()),
+						cppcp::skip(angle_close()),
+						skip_optinal_whitespace(),
 						expression()
 					),
 					[](auto&& e) {
-					return std::make_shared<ast::declaration_function>(std::get<0>(e),std::get<1>(e));
+						auto&& params = std::get<0>(e);
+						auto&& opt_rt = std::get<1>(e);
+						auto&& expr = std::get<2>(e);
+						std::shared_ptr<ast::declaration_function> df;
+						std::vector<std::shared_ptr<ast::type_data>> paramTypes;
+						for (auto&& param : params) {
+							paramTypes.push_back(param->return_type());
+						}
+						if (opt_rt) {
+							df = std::make_shared<ast::declaration_function>(params, std::make_shared<ast::function_type_data>(opt_rt.value(), paramTypes), expr);
+						}
+						else {
+							df = std::make_shared<ast::declaration_function>(params, std::make_shared<ast::function_type_data>(std::make_shared<ast::var_type_data>(), paramTypes), expr);
+
+						}
+						return df;
 					}
 				);
 			}
@@ -1089,74 +1147,8 @@ namespace tig::magimocha {
 				));
 			}
 
-			struct expression_token_object
-			{
-				
-			};
-			using expression_token = std::variant<std::monostate>;
-			static constexpr cppcp::type_eraser<Itr, expression_token> expression_end() {
-				return cppcp::sup<Itr, expression_builder>(expression_builder{});
-			}
-			static constexpr cppcp::type_eraser<Itr,expression_token> expression_declaration_lambda() {
-				return cppcp::join(
-					declaration_lambda(),
-					cppcp::trys_variant(
-						expression_apply_function(),
-						expression_double_op(),
-						expression_end()
-					)
-				);
-			}
-			static constexpr auto expression_literal() {
-				return cppcp::join(
-					literal_(),
-					cppcp::trys_variant(
-						expression_double_op(),
-						expression_end()
-					)
-				);
-			}
-			static constexpr auto expression_single_op() {
-				return cppcp::join(
-					op(),
-					cppcp::trys_variant(
-						expression_call_name(),
-						expression_literal(),
-						expression_declaration_lambda()
-					)
-				);
-			}
-			static constexpr auto expression_double_op() {
-				return cppcp::join(
-					op(),
-					cppcp::trys_variant(
-						expression_call_name(),
-						expression_literal(),
-						expression_declaration_lambda()
-					)
-				);
-			}
-			static constexpr auto expression_apply_function() {
-				return cppcp::join(
-					apply_function(),
-					expression_double_op(),
-					expression_end()
-				)
-			}
-			static constexpr auto expression_start() {
-				return cppcp::trys(
-					declaration_lambda(),
-					op()
-				);
-			}
-			/*enum class op_token_type {
-				one,two
-			};*/
 
-			enum class operator_tokenizer_sw:char {
-				start, single_operator, double_operator, declation_lambda, literal_, apply_function, call_name,expression_block,named_function, end
-				
-			};
+
 			static constexpr auto expression_block() {
 				return cppcp::trys(
 					cppcp::get0(cppcp::join(cppcp::skip(parenthesis_open()), expression(), cppcp::skip(parenthesis_close()))),
@@ -1164,6 +1156,7 @@ namespace tig::magimocha {
 						cppcp::get0(
 							cppcp::join(
 								cppcp::skip(braces_open()),
+								skip_optinal_whitespace(),
 								cppcp::many(
 									cppcp::map(expression(), [](auto&& e) {return std::vector<std::shared_ptr<ast::expression>>{e}; }),
 									cppcp::join(
@@ -1173,13 +1166,15 @@ namespace tig::magimocha {
 												c2s(comma())
 											)
 										),
+										skip_optinal_whitespace(),
 										expression()
 									),
-									[](auto&& a,auto&& e) {
+									[](auto&& a, auto&& e) {
 										a.push_back(std::get<0>(e));
 										return cppcp::accm::contd(a);
 									}
-								), 
+								),
+								skip_optinal_whitespace(),
 								cppcp::skip(braces_close())
 							)
 						),
@@ -1190,6 +1185,92 @@ namespace tig::magimocha {
 				);
 			}
 
+			static constexpr auto declaration_variable() {
+				return cppcp::map(
+					cppcp::join(
+						cppcp::skip(impl::unicodeChar(anyc(), U'v')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'a')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'l')),
+						cppcp::skip(whitespace()),
+						identifier(),
+						skip_optinal_whitespace(),
+						cppcp::option(type_attr()),
+						cppcp::skip(equal()),
+						skip_optinal_whitespace(),
+						expression()
+					),
+					[](auto&& e) {
+						auto&& opt = std::get<1>(e);
+						if (opt) {
+							return std::make_shared<ast::declaration_variable>(std::get<0>(e), opt.value() , std::get<2>(e));
+						}
+						else {
+							auto&& body = std::get<2>(e);
+							return std::make_shared<ast::declaration_variable>(std::get<0>(e),std::shared_ptr<ast::type_data>() ,body);
+						}
+					}
+				);
+			}
+
+
+
+			static constexpr auto named_function_expression_scope() {
+				return cppcp::map(
+					cppcp::join(
+						cppcp::skip(impl::unicodeChar(anyc(), U'd')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'e')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'f')),
+						cppcp::skip(whitespace()),
+						cppcp::many(
+							cppcp::sup<Itr, string_type>(string_type{}),
+							anyc(),
+							[](auto&& a, auto && e) {
+								if (e == U'(') {
+									return cppcp::accm::terminate(a);
+								}
+								a.push_back(e);
+								return cppcp::accm::contd(a);
+							}
+						),
+						declaration_lambda_parameter(),
+						cppcp::skip(parenthesis_close()),
+						skip_optinal_whitespace(),
+						cppcp::option(type_attr()),
+						skip_optinal_whitespace(),
+						cppcp::skip(equal()),
+						skip_optinal_whitespace(),
+						expression()
+					),
+					[](auto&& e) {
+						auto&& name = std::get<0>(e);
+						auto&& params = std::get<1>(e);
+						auto&& opt_rt = std::get<2>(e);
+						auto&& expr = std::get<3>(e);
+						std::shared_ptr<ast::declaration_function> df;
+						std::vector<std::shared_ptr<ast::type_data>> paramTypes;
+						for (auto&& param:params) {
+							paramTypes.push_back(param->return_type());
+						}
+						if (opt_rt) {
+							df = std::make_shared<ast::declaration_function>(params, std::make_shared<ast::function_type_data>(opt_rt.value(), paramTypes), expr);
+						}
+						else {
+							df = std::make_shared<ast::declaration_function>(params, std::make_shared<ast::function_type_data>(std::make_shared<ast::var_type_data>(),paramTypes), expr);
+
+						}
+						
+						if (name.empty()) {
+							return std::static_pointer_cast<ast::expression>(df);
+						}
+						return std::static_pointer_cast<ast::expression>(std::make_shared<ast::named_function>(name, df));
+
+					}
+				);
+			}
+			enum class operator_tokenizer_sw :char {
+				start, single_operator, double_operator, declation_lambda, literal_, apply_function, call_name, expression_block, end
+
+			};
 			static constexpr auto operator_tokenizer() {
 				using s = operator_tokenizer_sw;
 				using val_type = ast::operator_token_type;
@@ -1200,7 +1281,6 @@ namespace tig::magimocha {
 							std::vector<operator_tokenizer_sw>{
 								s::single_operator,
 								s::declation_lambda,
-								s::named_function,
 								s::call_name,
 								s::literal_,
 								s::expression_block
@@ -1212,54 +1292,6 @@ namespace tig::magimocha {
 						a.push_back(e);
 						return cppcp::accm::contd(a);
 					},
-					cppcp::branch::value_with(s::named_function,
-						cppcp::map(
-							cppcp::map(
-								cppcp::join(
-									cppcp::skip(impl::unicodeChar(anyc(),U'd')),
-									cppcp::skip(impl::unicodeChar(anyc(),U'e')),
-									cppcp::skip(impl::unicodeChar(anyc(),U'f')),
-									cppcp::skip(whitespace()),
-									cppcp::many(
-										cppcp::sup<Itr,string_type>(string_type{}),
-										anyc(),
-										[](auto&& a,auto && e) {
-											if (e == U'(') {
-												return cppcp::accm::terminate(a);
-											}
-											a.push_back(e);
-											return cppcp::accm::contd(a);
-										}
-									),
-									declaration_lambda_parameter(),
-									cppcp::skip(parenthesis_close()),
-									cppcp::skip(cppcp::option(whitespace())),
-									cppcp::skip(equal()),
-									expression()
-								),
-								[](auto&& e){
-									auto name = std::get<0>(e);
-									auto param = std::get<1>(e);
-									auto expr = std::get<2>(e);
-									auto df= std::make_shared<ast::declaration_function>(param, expr);
-									if (name.empty()) {
-										return std::static_pointer_cast<ast::expression>(df);
-									}
-									return std::static_pointer_cast<ast::expression>(std::make_shared<ast::named_function>(name,df));
-								}
-							),
-							[](auto&& e) {
-								return std::pair<std::vector<operator_tokenizer_sw>, val_type>{
-									std::vector<operator_tokenizer_sw>{
-										s::apply_function,
-										s::double_operator,
-										s::end
-									},
-									val_type(e)
-								};
-							}
-						)
-					),
 					cppcp::branch::value_with(s::declation_lambda,
 						cppcp::map(
 							declaration_lambda(),
@@ -1283,7 +1315,6 @@ namespace tig::magimocha {
 									std::vector<operator_tokenizer_sw>{
 										s::literal_,
 										s::declation_lambda,
-										s::named_function,
 										s::call_name,
 										s::expression_block
 									},
@@ -1330,7 +1361,6 @@ namespace tig::magimocha {
 									std::vector<operator_tokenizer_sw>{
 										s::literal_,
 										s::declation_lambda,
-										s::named_function,
 										s::call_name,
 										s::expression_block
 									},
@@ -1373,19 +1403,34 @@ namespace tig::magimocha {
 				);
 				return cppcp::lazy([=]() {return cache; });
 			}
-			static constexpr cppcp::type_eraser<Itr, std::shared_ptr<typename ast::operation>> expression() {
+			static constexpr cppcp::type_eraser<Itr, std::shared_ptr<ast::expression>> expression() {
 				return cppcp::lazy(
 					[]() {
-						return cppcp::map(
-							operator_tokenizer(),
-							[](auto&& e) {
-								return std::make_shared<ast::operation>(std::move(e));
-								//return processing_double_operator(processing_single_operator(processing_apply_function(std::move(e))));
-							}
+						return cppcp::trys(
+							cppcp::map(
+								named_function_expression_scope(), 
+								[](auto&& e) {
+									return std::static_pointer_cast<ast::expression>(e);
+								}
+							),
+							cppcp::map(
+								declaration_variable(),
+								[](auto&& e) {
+									return std::static_pointer_cast<ast::expression>(e);
+								}
+							),
+							cppcp::map(
+								operator_tokenizer(),
+								[](auto&& e)->std::shared_ptr<ast::expression > {
+									return std::make_shared<ast::operation>(std::move(e));
+									//return processing_double_operator(processing_single_operator(processing_apply_function(std::move(e))));
+								}
+							)
 						); 
 					}
 				);
 			}
+			
 			static constexpr auto named_function_module_scope() {
 				return cppcp::map(
 					cppcp::join(
@@ -1406,19 +1451,36 @@ namespace tig::magimocha {
 						),
 						declaration_lambda_parameter(),
 						cppcp::skip(parenthesis_close()),
-						cppcp::skip(cppcp::option(whitespace())),
+						skip_optinal_whitespace(),
+						cppcp::option(type_attr()),
+						skip_optinal_whitespace(),
 						cppcp::skip(equal()),
+						skip_optinal_whitespace(),
 						expression()
 					),
 					[](auto&& e)->std::shared_ptr<ast::module_member> {
-						auto name = std::get<0>(e);
-						auto param = std::get<1>(e);
-						auto expr = std::get<2>(e);
-						auto df = std::make_shared<ast::declaration_function>(param, expr);
+						auto&& name = std::get<0>(e);
+						auto&& params = std::get<1>(e);
+						auto&& opt_rt = std::get<2>(e);
+						auto&& expr = std::get<3>(e);
 						if (name.empty()) {
 							throw "not allow anonymous function in module";
+						} 
+						std::shared_ptr<ast::declaration_function> df;
+						std::vector<std::shared_ptr<ast::type_data>> paramTypes;
+						for (auto&& param : params) {
+							paramTypes.push_back(param->return_type());
+						}
+						if (opt_rt) {
+							df = std::make_shared<ast::declaration_function>(params, std::make_shared<ast::function_type_data>(opt_rt.value(), paramTypes), expr);
+						}
+						else {
+							df = std::make_shared<ast::declaration_function>(params, std::make_shared<ast::function_type_data>(std::make_shared<ast::var_type_data>(), paramTypes), expr);
+
 						}
 						return std::make_shared<ast::named_function>(name, df);
+						
+
 					}
 				);
 			}
@@ -1430,7 +1492,7 @@ namespace tig::magimocha {
 			static constexpr auto module_members() {
 				return cppcp::many(
 					cppcp::sup<Itr>(std::vector<std::shared_ptr<ast::module_member>>{}),
-					cppcp::join(cppcp::skip(cppcp::option(whitespace())),module_members_item()),
+					cppcp::join(skip_optinal_whitespace(),module_members_item()),
 					[](auto&& a, auto&& e){
 						a.push_back(std::get<0>(e));
 						return cppcp::accm::contd(a);
@@ -1448,9 +1510,10 @@ namespace tig::magimocha {
 						cppcp::skip(impl::unicodeChar(anyc(), U'e')),
 						cppcp::skip(whitespace()),
 						identifier(),
+						skip_optinal_whitespace(),
 						cppcp::skip(braces_open()),
 						module_members(),
-						cppcp::skip(cppcp::option(whitespace())),
+						skip_optinal_whitespace(),
 						cppcp::skip(braces_close())
 					),
 					[](auto&& e) {

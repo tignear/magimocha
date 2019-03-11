@@ -1,6 +1,5 @@
 #pragma once
 #include "llvm/IR/Value.h"
-#include "magimocha/ast.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/Constants.h"
@@ -8,16 +7,17 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "magimocha/ast.h"
 #include "../unicode.h"
+#include "llvm-type.h"
 #include "codegen.h"
-
 #include "scope.h"
+
 namespace tig::magimocha::codegen {
 
-	class Scope;
 	class expression_visitor;
 	class module_visitor;
-	class FunctionScope;
+
 	namespace ast = tig::magimocha::ast;
 
 
@@ -209,21 +209,27 @@ namespace tig::magimocha::codegen {
 		llvm::Value* visit(std::shared_ptr<ast::apply_function> n) {
 			auto target = n->target();
 			if (target->type() == ast::leaf_type::call_name) {
-				return scope_->getFunctionInfo(scope_,std::static_pointer_cast<ast::call_name>(target))->receiver(scope_,n);
+				return scope_->getSymbolInfo(std::static_pointer_cast<ast::call_name>(target)->value())->receive(scope_,n);
 			}
 			auto x = process_expression(*this,scope_, target);
+			auto&& args = n->args();
+			std::vector<llvm::Value*> llvm_args;
+			for (int i = 0; i < args.size(); ++i) {
+				llvm_args.push_back(process_expression(scope_, args[i]));
+			}
 			Builder.SetInsertPoint(scope_->getLLVMBasicBlock(scope_));
-			return Builder.CreateCall(x);
-			//throw "not implemented";
+			return Builder.CreateCall(x, llvm_args, "lambda_calltmp");
 		}
 		auto visit(std::shared_ptr<ast::named_function> n) {
 
-			auto info=scope_->getFunctionInfoThisScope(scope_,n->name());
-			auto fscope = info->scope;
+			auto s=scope_->getChildScope(n->name());
+			if (s->type() != scope_type::function) {
+				throw "invalid state";
+			}
+			auto fscope = static_cast<FunctionScope*>(s);
 			auto v = process_expression(fscope, n->body()->body());
 
 			Builder.SetInsertPoint(fscope->getLLVMBasicBlock(scope_));
-
 			Builder.CreateRet(v);
 			auto F = fscope->getLLVMFunction(scope_);
 			llvm::verifyFunction(*F);
@@ -231,8 +237,36 @@ namespace tig::magimocha::codegen {
 			return F;
 		}
 		auto visit(std::shared_ptr<ast::call_name> n) {
-			return scope_->getVariableInfo(scope_,n)->receiver(scope_, n);
-			
+			return scope_->getSymbolInfo(n->value())->receive(scope_, n);
+		}
+		auto visit(std::shared_ptr<ast::expression_block> n) {
+			auto&& name=scope_->generateUniqueName();
+			llvm::BasicBlock* BB = scope_->getLLVMBasicBlock(scope_);
+			auto bs=BlockScope::create(scope_,name,BB);
+			scope_->addChildScope(name, bs);
+			llvm::Value* v;
+			for (auto&& expr : n->value()) {
+				v = process_expression(bs,expr);
+			}
+
+			return v;
+		}
+		auto visit(std::shared_ptr<ast::declaration_variable> v) {
+			auto&& name = v->name();
+			auto&& expr=process_expression(scope_, v->body());
+			struct Val :SymbolInfo {
+				llvm::Value* value;
+				Val(llvm::Value* value) :value(value) {}
+				llvm::Value* receive(Scope* s, std::shared_ptr<ast::call_name> cn)override {
+					return value;
+				}
+				llvm::Value* receive(Scope* s, std::shared_ptr<ast::apply_function> af)override {
+					throw "not implementd";//TODO
+				}
+			};
+			expr->setName(to_string(name));
+			scope_->addSymbolInfo(name,std::make_shared<Val>(expr));
+			return expr;
 		}
 		auto visit(std::shared_ptr<ast::expression> n) {
 			throw "not implemented";
@@ -248,7 +282,7 @@ namespace tig::magimocha::codegen {
 
 		std::nullptr_t visit(std::shared_ptr<ast::declaration_module> n) {
 			for (auto&& member : n->members()) {
-				process_module(ModuleScope::create(scope_), member);
+				process_module(scope_->getChildScope(n->name()) , member);
 
 			}
 			return nullptr;
@@ -264,15 +298,20 @@ namespace tig::magimocha::codegen {
 		}
 		std::nullptr_t visit(std::shared_ptr<ast::named_function>n) {
 
-			auto info = scope_->getFunctionInfoThisScope(scope_,n->name());
-			auto fscope = info->scope;
+			auto fscope = scope_->getChildScope(n->name());
 			auto v = process_expression(fscope, n->body()->body());
 
 			Builder.SetInsertPoint(fscope->getLLVMBasicBlock(scope_));
 
 			Builder.CreateRet(v);
-			auto F = fscope->getLLVMFunction(scope_);
-			llvm::verifyFunction(*F);
+			if (fscope->type() == scope_type::function) {
+				auto F = static_cast<FunctionScope*>(fscope)->getLLVMFunction(scope_);
+				llvm::verifyFunction(*F);
+			}
+			else {
+				throw "not function";
+			}
+
 			return nullptr;
 		}
 	};

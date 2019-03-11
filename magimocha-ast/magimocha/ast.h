@@ -7,7 +7,7 @@
 namespace tig::magimocha {
 	namespace ast {
 		enum class leaf_type {
-			declaration_name,
+			//declaration_name,
 			declaration_parameter,
 			declaration_function,
 			signed_number_literal,
@@ -25,49 +25,112 @@ namespace tig::magimocha {
 		};
 		using char_type = char32_t;
 		using string_type = std::basic_string<char_type>;
-
+		//struct expression;
 		struct ast_base {
 			virtual ~ast_base() {}
-			virtual leaf_type type() = 0;
+			virtual leaf_type type()const = 0;
 		};
-		struct expression :public ast_base {
-
+		enum class type_data_type {
+			simple,function/*,polymorphic*/,var
 		};
-		struct module_member :public ast_base {};
+		struct type_data{
+			virtual type_data_type type()const = 0;
+			virtual ~type_data() {}
+		};
+		class simple_type_data final:public type_data {
+			string_type value_;
+		public:
+			simple_type_data(string_type value) :value_(value) {}
+			type_data_type type()const override {
+				return type_data_type::simple;
+			}
+			const string_type& value()const {
+				return value_;
+			}
+		};
+		class function_type_data final :public type_data {
+		public:
+			std::shared_ptr<type_data> result_type;
+			std::vector<std::shared_ptr<type_data>> args;
+			function_type_data(std::shared_ptr<type_data> result_type, std::vector<std::shared_ptr<type_data>> args):
+				result_type(result_type),args(args)
+			{
 
-		class declaration_name final :public ast_base {
+			}
+			type_data_type type()const override {
+				return type_data_type::function;
+			}
+		};
+		struct var_type_data final :public type_data {
+			std::shared_ptr<type_data> type_data;
+			var_type_data() = default;
+			type_data_type type()const override {
+				return type_data_type::var;
+			}
+		};
+		/*class ref_type_data final:public type_data {
+		public:
+			std::shared_ptr<type_data>  value;
+
+			ref_type_data(std::shared_ptr<type_data> value) :value(value) {}
+			ref_type_data(){}
+
+			type_data_type type()override {
+				return type_data_type::ref;
+			}
+			
+		};*/
+		struct typed_data :public virtual ast_base {
+			virtual std::shared_ptr<type_data> return_type() = 0;
+			//virtual void set_return_type(std::shared_ptr<type_data>) = 0;
+		};
+		struct expression :public virtual typed_data {
+			
+		};
+		struct module_member :public virtual ast_base {};
+
+
+
+		/*class declaration_name final :public typed_data {
 			string_type name_;
-
+			std::shared_ptr<type_data> type_data_;
 		public:
 			leaf_type type()override {
 				return leaf_type::declaration_name;
 			}
-			 declaration_name(const string_type& name) :name_(name) {
+			declaration_name(const string_type& name, std::shared_ptr<type_data> type_data) :name_(name) {
 
 			}
 
-			 const string_type& value()const {
+			const string_type& value()const {
 				return name_;
 			}
-
-		};
-		class declaration_parameter final :public ast_base {
+			std::shared_ptr<type_data> return_type()override {
+				
+			}
+		};*/
+		class declaration_parameter final :public typed_data {
 			std::optional<string_type> name_;
+			std::shared_ptr<type_data> type_data_;
+
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::declaration_parameter;
 			}
-			 declaration_parameter(const string_type& name) :name_(name) {
+			 declaration_parameter(const string_type& name, std::shared_ptr<type_data> type_data) :name_(name),type_data_(type_data) {
 
 			}
-			 declaration_parameter() : name_(std::nullopt) {
+			 declaration_parameter(std::shared_ptr<type_data> type_data) : name_(std::nullopt),type_data_(type_data) {
 
 			}
-			 declaration_parameter(std::optional<string_type> s) : name_(s) {
+			 declaration_parameter(std::optional<string_type> s, std::shared_ptr<type_data> type_data) : name_(s),type_data_(type_data) {
 
 			}
-
-			 const std::optional<string_type> name()const {
+			std::shared_ptr<type_data> return_type()override {
+				
+				return type_data_;
+			}
+			const std::optional<string_type> name()const {
 				return name_;
 			}
 			 bool is_ignore_parameter() {
@@ -78,14 +141,16 @@ namespace tig::magimocha {
 		class declaration_function final :public expression,public module_member{
 			std::vector<std::shared_ptr<declaration_parameter>> params_;
 			std::shared_ptr<expression> body_;
+			std::shared_ptr<type_data> type_data_;
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::declaration_function;
 			}
 			 declaration_function(
 				std::vector<std::shared_ptr<declaration_parameter>> params,
+				 std::shared_ptr<type_data> type_data,
 				std::shared_ptr<expression> body
-			) :params_(params), body_(body) {
+			) :params_(params),type_data_(type_data), body_(body) {
 
 			}
 			const std::vector<std::shared_ptr<declaration_parameter>>& params() {
@@ -94,13 +159,22 @@ namespace tig::magimocha {
 			const std::shared_ptr<expression> body() {
 				return body_;
 			}
+			std::shared_ptr<type_data> return_type()override {
+				throw type_data_;
+			}
+			
 		};
 		class named_function final:public expression,public module_member {
 			string_type name_;
 			std::shared_ptr<declaration_function> body_;
 		public:
-			named_function(string_type name,std::shared_ptr<declaration_function> body):name_(name),body_(body){}
-			leaf_type type()override {
+			named_function(
+				string_type name,
+				std::shared_ptr<declaration_function> body
+			):
+				name_(name),
+				body_(body){}
+			leaf_type type()const override {
 				return leaf_type::named_function;
 			}
 			auto body() {
@@ -108,6 +182,9 @@ namespace tig::magimocha {
 			}
 			auto& name() {
 				return name_;
+			}
+			std::shared_ptr<type_data> return_type()override {
+				return body_->return_type();
 			}
 		};
 		struct literal_ :public expression {
@@ -122,7 +199,7 @@ namespace tig::magimocha {
 		class signed_number_literal final :public integer_literal {
 			std::int64_t value_;
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::signed_number_literal;
 			}
 			 signed_number_literal(const  std::int64_t value) :value_(value) {
@@ -131,11 +208,14 @@ namespace tig::magimocha {
 			 const std::int64_t value()const {
 				return value_;
 			}
+			 std::shared_ptr<type_data> return_type()override {
+				 return std::make_shared<simple_type_data>(U"int64");
+			 }
 		};
 		class unsigned_number_literal final :public integer_literal {
 			std::uint64_t value_;
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::unsigned_number_literal;
 			}
 			 unsigned_number_literal(const  std::uint64_t value) :value_(value) {
@@ -157,11 +237,14 @@ namespace tig::magimocha {
 				}
 				throw std::invalid_argument("");
 			}
+			 std::shared_ptr<type_data> return_type()override {
+				 return std::make_shared<simple_type_data>(U"uint64");
+			 }
 		};
 		class floating_literal final :public numeric_literal {
 			double value_;
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::floating_literal;
 			}
 			 floating_literal(double value) :value_(value) {
@@ -170,12 +253,14 @@ namespace tig::magimocha {
 			 const double value()const {
 				return value_;
 			}
-
+			std::shared_ptr<type_data> return_type()override {
+				return std::make_shared<simple_type_data>(U"double");
+			}
 		};
 		class string_literal final :public literal_ {
 			std::u32string value_;
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::string_literal;
 			}
 			 string_literal(const std::u32string& value) :value_(value) {
@@ -184,34 +269,42 @@ namespace tig::magimocha {
 			 const std::u32string& value()const {
 				return value_;
 			}
+			std::shared_ptr<type_data> return_type()override {
+				return std::make_shared<simple_type_data>(U"string");//TODO
+			}
 		};
 		class apply_function final :public expression {
 			std::shared_ptr<expression> target_;
 			std::vector< std::shared_ptr<expression>> args_;
+			
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::apply_function;
 			}
-			 apply_function(std::shared_ptr<expression> target, std::vector<std::shared_ptr<expression>> args) :target_(target), args_(args) {
+			apply_function(std::shared_ptr<expression> target, std::vector<std::shared_ptr<expression>> args) :target_(target), args_(args) {
 
 			}
-			 const auto& target()const {
+			std::shared_ptr<type_data> return_type()override {
+				return target_->return_type();
+			}
+			const auto& target()const {
 				return target_;
 			}
-			 auto& target() {
+			auto& target() {
 				return target_;
 			}
-			 auto& args() {
+			auto& args() {
 				return args_;
 			}
-			 const auto& args()const {
+			const auto& args()const {
 				return args_;
 			}
 		};
 		class call_name final :public expression {
 			std::u32string value_;
+			std::shared_ptr<type_data> type_data_;
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::call_name;
 			}
 			 call_name(const std::u32string& value) :value_(value) {
@@ -220,18 +313,25 @@ namespace tig::magimocha {
 			 const std::u32string& value()const {
 				return value_;
 			}
+			std::shared_ptr<type_data> return_type()override {
+				return  type_data_;
+			}
 		};
 		class expression_block :public expression {
 			std::vector<std::shared_ptr<expression>> expressions_;
+			std::shared_ptr<type_data> type_data_;
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::expression_block;
 			}
 			 expression_block(std::vector<std::shared_ptr<expression>>&& expressions) :expressions_(expressions) {
 
 			}
-			 const auto& value()const {
+			const auto& value()const {
 				return expressions_;
+			}
+			std::shared_ptr<type_data> return_type()override {
+				return type_data_;
 			}
 		};
 		class op_token_double {
@@ -283,17 +383,21 @@ namespace tig::magimocha {
 		>;
 		class operation :public expression {
 			std::list<operator_token_type> op_;
+			std::shared_ptr<type_data> type_data_;
 		public:
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::operation;
 			}
-			 operation(std::list<operator_token_type>&& op) :op_(op) {
+			operation(std::list<operator_token_type>&& op) :op_(op) {
 
 			}
-			 auto& value() {
+			std::shared_ptr<type_data> return_type()override {
+				return type_data_;
+			}
+			auto& value() {
 				return op_;
 			}
-			 const auto& value()const {
+			const auto& value()const {
 				return op_;
 			}
 		};
@@ -304,7 +408,7 @@ namespace tig::magimocha {
 			declaration_module(const string_type& name,std::vector<std::shared_ptr<module_member>>&& members):name_(name),members_(members) {
 
 			}
-			leaf_type type()override {
+			leaf_type type()const override {
 				return leaf_type::declaration_module;
 			}
 			std::vector<std::shared_ptr<module_member>>&  members() {
@@ -315,16 +419,24 @@ namespace tig::magimocha {
 			}
 		};
 		class declaration_variable final :public expression, public module_member {
-			std::shared_ptr<declaration_name> name_;
+			string_type name_;
+			std::shared_ptr<type_data> type_data_;
 			std::shared_ptr<expression> body_;
 		public:
-			declaration_variable(std::shared_ptr<declaration_name> name, std::shared_ptr<expression> body):name_(name),body_(body) {
+			declaration_variable(
+				const string_type& name,
+				std::shared_ptr<type_data> type_data,
+				std::shared_ptr<expression> body
+			) :name_(name), body_(body) {
 
 			}
-			leaf_type type()override {
+			std::shared_ptr<type_data> return_type()override {
+				return  type_data_;
+			}
+			leaf_type type()const override {
 				return leaf_type::declaration_variable;
 			}
-			std::shared_ptr<declaration_name> name() {
+			const string_type& name() {
 				return name_;
 			}
 			std::shared_ptr<expression> body() {

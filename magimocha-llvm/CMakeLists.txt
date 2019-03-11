@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.8)
 
 #llvm 
-set(LLVM_DIR "C:\\Users\\tignear\\CMakeBuilds\\9a4487f8-4285-ec3c-ab94-794337022481\\install\\x64-Release\\lib\\cmake\\llvm")
+set(LLVM_DIR "D:\\develop\\llvm-install\\lib\\cmake\\llvm")
 find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
@@ -17,9 +17,17 @@ add_definitions(${LLVM_DEFINITIONS})
 
 # Find the libraries that correspond to the LLVM components
 # that we wish to use
-llvm_map_components_to_libnames(llvm_libs support core irreader)
+llvm_map_components_to_libnames(
+	llvm_libs 
+	support 
+	core 
+	irreader 
+	native
+	nativecodegen
+)
 
 
-add_executable(magimocha-llvm "magimocha/llvm/codegen.cpp")
+add_executable(magimocha-llvm "magimocha/codegen/codegen.cpp" "magimocha/codegen/pass.cpp")
 
 target_link_libraries(magimocha-llvm magimocha-ast ${llvm_libs})
+set (CMAKE_EXE_LINKER_FLAGS "/STACK:10000000" )

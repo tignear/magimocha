@@ -305,13 +305,13 @@ TEST(MagiMocha, identifier_head) {
 	auto p = x::identifier_head();
 	EXPECT_EQ(p(src{ cbegin(s),cend(s) }).get(), U'x');
 }
-TEST(MagiMocha, declation_name) {
+/*TEST(MagiMocha, declation_name) {
 	using namespace std::string_literals;
 	std::u32string s = U"xyz//";
 
 	auto p = x::declaration_name();
 	EXPECT_EQ(p(src{ cbegin(s),cend(s) }).get()->value(), U"xyz");
-}
+}*/
 
 TEST(MagiMocha, declation_lambda_arg2) {
 	using namespace std::string_literals;

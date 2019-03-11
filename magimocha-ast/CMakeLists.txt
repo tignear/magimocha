@@ -21,4 +21,4 @@ target_link_libraries(magimocha-ast INTERFACE cppcp)
 
 #link_directories(magimocha llvm)
 
-#set (CMAKE_EXE_LINKER_FLAGS "/STACK:10000000" )
+set (CMAKE_EXE_LINKER_FLAGS "/STACK:10000000" )
