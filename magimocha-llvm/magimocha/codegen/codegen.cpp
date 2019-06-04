@@ -2,8 +2,8 @@
 #include "magimocha/ast-visitor.h"
 #include "codegen.h"
 #include "pass.h"
-#include "llvm-type.h"
 #include "visitor.h"
+#include "llvm-type.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
@@ -58,6 +58,11 @@ using p = tig::magimocha::parser::p<u32src>;
 namespace ast = tig::magimocha::ast;
 namespace codegen=tig::magimocha::codegen;
 namespace tig::magimocha::codegen {
+	//global variables
+	llvm::LLVMContext TheContext;
+	llvm::IRBuilder<llvm::ConstantFolder> Builder(TheContext);
+	ScopeHolder scopes;
+	//functions
 	llvm::Value* process_expression(Scope* s, std::shared_ptr<ast::expression> expr) {
 		expression_visitor v{ s };
 		return process_expression(v,s, expr);
@@ -82,18 +87,19 @@ namespace tig::magimocha::codegen {
 			}
 
 			std::monostate visit(std::shared_ptr<ast::named_function> n) {
-				auto& params = n->body()->params();
-
-				std::vector<llvm::Type*> Doubles(params.size(), llvm::Type::getDoubleTy(TheContext));
-				llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getDoubleTy(TheContext), Doubles, false);
-
-				llvm::Function *F = llvm::Function::Create(FT, llvm::Function::PrivateLinkage, to_string(s->mangling(n->name())), s->getLLVMModule());
-				std::unordered_map<string_type,std::shared_ptr<SymbolInfo>> variables;
+				auto&& ty_func = n->return_type_func();
+				auto&& params = n->body()->params();
+				//llvm::FunctionType*FT = type2llvmType(s,ty_func);
+				//llvm::Function *F = llvm::Function::Create(FT, llvm::Function::PrivateLinkage, to_string(s->mangling(n->name())), s->getLLVMModule());
 				struct Arg :SymbolInfo {
-					llvm::Argument* farg;
-					Arg(llvm::Argument* farg) :farg(farg) {}
-					llvm::Value* receive(Scope*, std::shared_ptr<ast::call_name>)override {
-						return farg;
+					std::shared_ptr<ast::declaration_parameter> param;
+					TypedFunctionScope* tfscope;
+					unsigned param_no;
+					Arg(std::shared_ptr<ast::declaration_parameter> param, unsigned param_no):param(param),param_no(param_no){}
+					llvm::Value* receive(Scope* s, std::shared_ptr<ast::call_name> cn)override {
+						
+						unify(s, param->return_type(), cn->return_type());
+						return tfscope->getLLVMArgument(param_no);
 					}
 					llvm::Value* receive(Scope* s, std::shared_ptr<ast::apply_function> af)override {
 						std::vector<llvm::Value*> llvm_args;
@@ -101,26 +107,37 @@ namespace tig::magimocha::codegen {
 							llvm_args.push_back(process_expression(s, arg));
 						}
 						Builder.SetInsertPoint(s->getLLVMBasicBlock(s));
-						return Builder.CreateCall(farg, llvm_args,"lambda_calltmp");
+						return Builder.CreateCall(tfscope->getLLVMArgument(param_no), llvm_args,"lambda_calltmp");
 					}
 				};
+				auto fscope = FunctionScope::create(s, n->name());
+				
 				{
-					auto farg = F->arg_begin();
+					unsigned cnt = 0;
+					//auto farg = F->arg_begin();
 					for (auto param = begin(params); param != end(params);) {
 
 						if ((*param)->name()) {
-							farg->setName(to_string((*param)->name().value()));
-							variables[(*param)->name().value()] = std::make_shared<Arg>(farg);
+							//farg->setName(to_string((*param)->name().value()));
+							fscope->addSymbolInfo((*param)->name().value(), std::make_shared<Arg>(*param,cnt));
 						}
-						++farg;
+						++cnt;
 						++param;
 					}
 				}
-				auto fscope = FunctionScope::create(s,n->name(), F, std::move(variables));
 				struct Fun :SymbolInfo {
-					llvm::Function* F;
-					Fun(llvm::Function* F) :F(F) {}
+					FunctionScope* fscope;
+					Fun(FunctionScope* fscope) :fscope(fscope) {}
 					llvm::Value* receive(Scope* s, std::shared_ptr<typename ast::apply_function> af)override {
+						auto expect_ft = af->target()->return_type();
+						if (expect_ft->type() != ast::type_data_type::function) {
+							throw "error";
+						}
+						auto tfscope=fscope->getTypedFunctionScope(s,std::static_pointer_cast<ast::function_type_data>(expect_ft));
+						if (!tfscope) {
+							throw "NIMPL";
+						}
+						auto F=tfscope->getLLVMFunction();
 						auto&& args = af->args();
 						if (F->arg_size() != args.size())
 							throw "not match args cnt";
@@ -133,12 +150,13 @@ namespace tig::magimocha::codegen {
 						return Builder.CreateCall(F, llvm_args,"calltmp");
 					}
 					llvm::Value* receive(Scope* s, std::shared_ptr<typename ast::call_name> cn)override {
-						return F;
+						//return F;
+						throw "NIMPL";
 					}
 				};
 				s->addSymbolInfo(
 					n->name(),
-					std::make_shared<Fun>(F)
+					std::make_shared<Fun>(fscope)
 				);
 				s->addChildScope(n->name(),fscope);
 				return std::monostate{};
@@ -177,17 +195,23 @@ namespace tig::magimocha::codegen {
 
 			}
 			std::monostate visit(std::shared_ptr<ast::named_function> n) {
-				auto& params = n->body()->params();
-
-				std::vector<llvm::Type*> Doubles(params.size(), llvm::Type::getDoubleTy(TheContext));
-				llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getDoubleTy(TheContext), Doubles, false);
-
-				llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, to_string(s->mangling(n->name())), s->getLLVMModule());
-				std::unordered_map<string_type, std::shared_ptr<SymbolInfo>> variables;
+				auto&& ty_func = n->return_type_func();
+				auto&& params = n->body()->params();
+				//llvm::FunctionType*FT = type2llvmType(s,ty_func);
+				//llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, to_string(s->mangling(n->name())), s->getLLVMModule());
 				struct Arg :SymbolInfo {
-					llvm::Argument* farg;
-					Arg(llvm::Argument* farg) :farg(farg) {}
-					llvm::Value* receive(Scope*, std::shared_ptr<ast::call_name>)override {
+					std::shared_ptr<ast::declaration_parameter> param;
+					unsigned param_no;
+					llvm::Value* farg;
+
+
+					Arg(std::shared_ptr<ast::declaration_parameter> param, unsigned param_no) :param(param), param_no(param_no) {}
+					llvm::Value* receive(Scope* s, std::shared_ptr<ast::call_name> cn)override {
+
+						unify(s, param->return_type(), cn->return_type());
+						if (!farg) {
+							farg = new llvm::Argument(type2llvmType(s, param->return_type()), to_string(param->name().value()));
+						}
 						return farg;
 					}
 					llvm::Value* receive(Scope* s, std::shared_ptr<ast::apply_function> af)override {
@@ -196,44 +220,77 @@ namespace tig::magimocha::codegen {
 							llvm_args.push_back(process_expression(s, arg));
 						}
 						Builder.SetInsertPoint(s->getLLVMBasicBlock(s));
-						return Builder.CreateCall(farg, llvm_args,"lambda_calltmp");
+						return Builder.CreateCall(farg, llvm_args, "lambda_calltmp");
 					}
 				};
+				auto fscope = FunctionScope::create(s, n->name());
+
 				{
-					auto farg = F->arg_begin();
+					unsigned cnt = 0;
+					//auto farg = F->arg_begin();
 					for (auto param = begin(params); param != end(params);) {
 
 						if ((*param)->name()) {
-							farg->setName(to_string((*param)->name().value()));
-							variables[(*param)->name().value()] = std::make_shared<Arg>(farg);
+							//farg->setName(to_string((*param)->name().value()));
+							fscope->addSymbolInfo((*param)->name().value(), std::make_shared<Arg>(*param, cnt));
 						}
-						++farg;
+						++cnt;
 						++param;
 					}
 				}
-				auto fscope = FunctionScope::create(s, n->name(), F, std::move(variables));
 				struct Fun :SymbolInfo {
-					llvm::Function* F;
-					Fun(llvm::Function* f) :F(f) {}
+					FunctionScope* fscope;
+					std::shared_ptr<ast::expression> body;
+					Fun(FunctionScope* fscope, std::shared_ptr<ast::expression> body) :fscope(fscope),body(body) {}
 					llvm::Value* receive(Scope* s, std::shared_ptr<typename ast::apply_function> af)override {
 						auto&& args = af->args();
-						if (F->arg_size() != args.size())
-							throw "not match args cnt";
-
+						std::vector<std::shared_ptr<ast::type_data>> arg_type;
 						std::vector<llvm::Value*> llvm_args;
-						for (int i = 0; i < args.size(); ++i) {
-							llvm_args.push_back(process_expression(s, args[i]));
+						for (auto itr = begin(args); itr != end(args); ++itr) {
+							llvm_args.push_back(process_expression(s, *itr));
+							arg_type.push_back(resolve_type(s,(*itr)->return_type()));
 						}
+
+						/*if (target->type()!=ast::leaf_type::call_name) {
+							throw "NIMPL";
+						}
+						auto target_cn = std::static_pointer_cast<ast::call_name>(target);*/
+						auto ftd = std::make_shared<ast::function_type_data>(std::make_shared<ast::var_type_data>(), arg_type);
+						auto tfscope = fscope->getTypedFunctionScope(
+							s,
+							ftd
+						);
+						if (!tfscope) {
+							tfscope=TypedFunctionScope::create(fscope,ftd,llvm::GlobalValue::LinkageTypes::ExternalLinkage);
+							std::vector<string_type> vec;
+							for (auto itr = cbegin(arg_type); itr != cend(arg_type);++itr) {
+								if ((*itr)->type()!=ast::type_data_type::simple) {
+									throw "NIMPL";
+								}
+								vec.push_back(std::static_pointer_cast<ast::simple_type_data>(*itr)->value());
+							}
+							fscope->addTypedFunctionScope(vec,tfscope);
+						}
+
+						process_expression(tfscope, body);
+						unify(s, af->return_type(), resolve_type(tfscope, body->return_type()));
+						unify(tfscope, af->return_type(), resolve_type(s, body->return_type()));
+
+						auto F = tfscope->getLLVMFunction();
+						/*if (F->arg_size() != args.size()) {
+							throw "not match args cnt";
+						}*/
 						Builder.SetInsertPoint(s->getLLVMBasicBlock(s));
-						return Builder.CreateCall(F, llvm_args,"calltmp" );
+						return Builder.CreateCall(F, llvm_args, "calltmp");
 					}
-					llvm::Value* receive(Scope* s, std::shared_ptr<typename ast::call_name> cn) override {
-						return F;
+					llvm::Value* receive(Scope* s, std::shared_ptr<typename ast::call_name> cn)override {
+						//return F;
+						throw "NIMPL";
 					}
 				};
 				s->addSymbolInfo(
 					n->name(),
-					std::make_shared<Fun>(F)
+					std::make_shared<Fun>(fscope,n->body()->body())
 				);
 				s->addChildScope(n->name(), fscope);
 				return std::monostate{};
@@ -256,15 +313,17 @@ int main() {
 	std::u32string s = U"\
 		module a {\n\
 			def main():double={\
-				add(2.0,4.0)\
+				//2.0*3.0\n\
+				add(2.0,4.0)\n\
 			}\
-			def add( a , b ):double = {\n\
+			def add( a:double , b:double ):double = {\n\
 				val x = a*2.0\n\
 				x+x\n\
 			}\n\
-			def add2(a,b):double=(def sub(x,y):double=x-y)(a,b)+add(a,b)\n\
+			//def add2(a,b):double=(def sub(x,y):double=x-y)(a,b)+add(a,b)\n\
 		}";
-	auto gscope = codegen::GlobalScope::create(codegen::PreludeScope::create());
+	auto gscopep = codegen::GlobalScope::create(codegen::PreludeScope::create());
+	auto gscope=std::static_pointer_cast<codegen::GlobalScope>(codegen::scopes.get(gscopep));
 	std::cout <<"taget triple:"<< gscope->getLLVMModule()->getTargetTriple()<<std::endl;
 	auto ast =cppcp::get0(
 		cppcp::join(
@@ -274,8 +333,9 @@ int main() {
 	)(u32src(cbegin(s), cend(s)));
 	//std::shared_ptr<ast::declaration_module> m = ast.get();
 	//std::cout << reinterpret_cast<uintptr_t>(m.get());
-	register_module_symbols(gscope, ast.get());
-	process_module(gscope,ast.get());
+	register_module_symbols(gscopep, ast.get());
+	process_module(gscopep,ast.get());
+	codegen::scopes.clear();
 	//process(gscope,p::expression()(ast.itr()).get());
 	gscope->getLLVMModule()->print(llvm::errs(),nullptr);
 
@@ -323,7 +383,7 @@ int main() {
 			return 1;
 		}
 
-		tig::magimocha::codegen::writeObjectFileWithLegacyPass(gscope->getLLVMModule(), TheTargetMachine,dest);
+		//tig::magimocha::codegen::writeObjectFileWithLegacyPass(gscope->getLLVMModule(), TheTargetMachine,dest);
 	}
 	system("pause");
 }

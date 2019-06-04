@@ -27,7 +27,14 @@ llvm_map_components_to_libnames(
 )
 
 
-add_executable(magimocha-llvm "magimocha/codegen/codegen.cpp" "magimocha/codegen/pass.cpp")
+add_executable(
+	magimocha-llvm 
+	"magimocha/codegen/codegen.cpp" 
+	"magimocha/codegen/pass.cpp" 
+	"magimocha/codegen/llvm-type.cpp"
+	"magimocha/codegen/scope.cpp"
+	"magimocha/codegen/visitor.cpp"
+)
 
 target_link_libraries(magimocha-llvm magimocha-ast ${llvm_libs})
 set (CMAKE_EXE_LINKER_FLAGS "/STACK:10000000" )

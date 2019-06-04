@@ -17,11 +17,10 @@ namespace tig::magimocha::codegen {
 
 	class expression_visitor;
 	class module_visitor;
-
+	class Scope;
 	namespace ast = tig::magimocha::ast;
 
 
-	
 	class expression_visitor {
 		Scope* scope_;
 	public:
@@ -49,162 +48,13 @@ namespace tig::magimocha::codegen {
 		template<typename T> struct is_shared_ptr : std::false_type {};
 		template<typename T> struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
 		template<typename T> static constexpr bool is_shared_ptr_v = is_shared_ptr<T>::value;
-		auto processing_apply_function(const std::list<typename ast::operator_token_type>& tokens) {
-
-			std::list<ast::operator_token_type> r;
-			for (auto itr = tokens.cbegin(); itr != tokens.cend(); ++itr) {
-				if (std::holds_alternative<ast::op_token_function_applying>(*itr)) {
-					r.pop_back();
-					r.push_back(
-						std::make_shared<ast::apply_function>(
-							std::visit(
-								[](auto&& e)->std::shared_ptr<typename ast::expression> {
-									using T = std::decay_t<decltype(e)>;
-									if constexpr (is_shared_ptr_v<T>) {
-										return std::static_pointer_cast<typename ast::expression>(e);
-									}
-									else {
-										throw std::invalid_argument("");
-									}
-								},
-								*std::prev(itr)
-							),
-							std::get<ast::op_token_function_applying>(*itr).args()
-						)
-					);
-					continue;
-				}
-				r.push_back(*itr);
-			}
-			return r;
-		}
-		auto processing_single_operator(std::list<typename ast::operator_token_type>&& e) {
-			auto fitr = e.begin();
-			auto sitr = std::next(fitr);
-			if (std::holds_alternative<ast::op_token_single>(*fitr)) {
-				auto n = std::make_shared<ast::apply_function>(
-					std::static_pointer_cast<typename ast::expression>(std::get<ast::op_token_single>(*fitr).name()),
-					std::vector{
-						std::visit(
-							[](auto&& e)->std::shared_ptr<typename ast::expression> {
-								using T = std::decay_t<decltype(e)>;
-								if constexpr (is_shared_ptr_v<T>) {
-									return std::static_pointer_cast<typename ast::expression>(e);
-								}
-								else {
-									throw std::invalid_argument("");
-								}
-							},
-							*sitr
-						)
-					}
-				);
-				e.erase(fitr, sitr);
-				e.push_front(n);
-			}
-			return e;
-		}
-		auto processing_double_operator(std::list<typename ast::operator_token_type>&& tokens) {
-			while (tokens.size() != 1) {
-				auto itr = tokens.begin();
-				std::optional<std::list<ast::operator_token_type>::iterator> high_left_itr = std::nullopt;
-				std::optional<OperatorInfo> high_left_info;
-				std::optional<ast::op_token_double> high_left_elem = std::nullopt;
-				for (; itr != tokens.end(); ++itr) {
-					auto elem = std::visit(
-						[](auto&& e)->std::optional<ast::op_token_double> {
-							using T = std::decay_t<decltype(e)>;
-							if constexpr (is_shared_ptr_v<T>) {
-								return std::nullopt;
-							}
-							else if constexpr (std::is_same_v<T, typename ast::op_token_double>) {
-								return e;
-							}
-							else {
-								throw std::invalid_argument("");
-							}
-						},
-						*itr
-					);
-					if (!elem) {
-						continue;
-					}
-					if (!high_left_itr && !high_left_elem&& !high_left_info) {
-						high_left_itr = itr;
-						high_left_elem = elem;
-						high_left_info = get_opinfo(elem.value());
-						continue;
-					}
-					auto old_p = high_left_info.value().priority;
-					auto ninfo = get_opinfo(elem.value());
-					auto new_p =ninfo->priority;
-					if (new_p > old_p) {
-						high_left_itr = itr;
-						high_left_elem = elem;
-						high_left_info = ninfo;
-						continue;
-					}
-					if (new_p == old_p) {
-						if (high_left_info->infix == infix_type::left) {
-							continue;
-						}
-						//old elem infix is right
-						high_left_itr = itr;
-						high_left_elem = elem;
-						high_left_info = ninfo;
-					}
-				}
-				if (!high_left_itr || !high_left_elem|| !high_left_info) {
-					throw std::invalid_argument("");
-				}
-				auto pitr = std::prev(high_left_itr.value());
-				auto nitr = std::next(high_left_itr.value());
-				auto nelem = std::make_shared<ast::apply_function>(
-					high_left_elem.value().name(),
-					std::vector<std::shared_ptr<ast::expression>>{
-					std::visit(
-						[](auto&& e)->std::shared_ptr<typename ast::expression> {
-						using T = std::decay_t<decltype(e)>;
-						if constexpr (is_shared_ptr_v<T>) {
-							return std::static_pointer_cast<typename ast::expression>(e);
-						}
-						else {
-							throw std::invalid_argument("");
-						}
-					},
-						*pitr
-						),
-						std::visit(
-							[](auto&& e)->std::shared_ptr<typename ast::expression> {
-						using T = std::decay_t<decltype(e)>;
-						if constexpr (is_shared_ptr_v<T>) {
-							return std::static_pointer_cast<typename ast::expression>(e);
-						}
-						else {
-							throw std::invalid_argument("");
-						}
-					},
-							*nitr
-						)
-				}
-				);
-				tokens.insert(tokens.erase(pitr, ++nitr), nelem);
-			}
-			return std::visit(
-				[](auto&& e)->std::shared_ptr<typename ast::expression> {
-				using T = std::decay_t<decltype(e)>;
-				if constexpr (is_shared_ptr_v<T>) {
-					return std::static_pointer_cast<typename ast::expression>(e);
-				}
-				else {
-					throw std::invalid_argument("");
-				}
-			},
-				tokens.front()
-				);
-		}
+		std::list<ast::operator_token_type> processing_apply_function(const std::list<typename ast::operator_token_type>& tokens);
+		std::list<ast::operator_token_type> processing_single_operator(std::list<typename ast::operator_token_type>&& e);
+		std::shared_ptr<ast::expression> processing_double_operator(std::list<typename ast::operator_token_type>&& tokens);
 		auto visit(std::shared_ptr<ast::operation> n) {
-			return process_expression(*this, scope_, processing_double_operator(processing_single_operator(processing_apply_function(n->value()))));
+			auto expr = processing_double_operator(processing_single_operator(processing_apply_function(n->value())));
+			unify(scope_, n->return_type(), expr->return_type());
+			return process_expression(*this, scope_,expr);
 		}
 		llvm::Value* visit(std::shared_ptr<ast::apply_function> n) {
 			auto target = n->target();
@@ -227,11 +77,12 @@ namespace tig::magimocha::codegen {
 				throw "invalid state";
 			}
 			auto fscope = static_cast<FunctionScope*>(s);
+			auto tfscope=fscope->getTypedFunctionScope(scope_,n->return_type_func());
 			auto v = process_expression(fscope, n->body()->body());
 
 			Builder.SetInsertPoint(fscope->getLLVMBasicBlock(scope_));
 			Builder.CreateRet(v);
-			auto F = fscope->getLLVMFunction(scope_);
+			auto F = tfscope->getLLVMFunction();
 			llvm::verifyFunction(*F);
 			
 			return F;
@@ -298,15 +149,40 @@ namespace tig::magimocha::codegen {
 		}
 		std::nullptr_t visit(std::shared_ptr<ast::named_function>n) {
 
-			auto fscope = scope_->getChildScope(n->name());
-			auto v = process_expression(fscope, n->body()->body());
+			auto expect_fscope = scope_->getChildScope(n->name());
+			if (expect_fscope->type() != scope_type::function) {
+				throw "N_EXPECT";
+			}
+			auto fscope = static_cast<FunctionScope*>(expect_fscope);
+			auto tfscope = fscope->getTypedFunctionScope(scope_,n->return_type_func());
+			if (!tfscope) {
+				tfscope = TypedFunctionScope::create(fscope, n->return_type_func(), llvm::GlobalValue::LinkageTypes::ExternalLinkage);
+				std::vector<string_type> vec;
+				auto&& args = n->return_type_func()->args;
+				for (auto itr = begin(args); itr != end(args); ++itr) {
+					auto rty=resolve_type(tfscope,*itr);
+					if (rty->type()!=ast::type_data_type::simple)
+					{
+						throw "NIMPL";
+					}
+					auto srty = std::static_pointer_cast<ast::simple_type_data>(rty);
+					vec.push_back(srty->value());
+				}
+				fscope->addTypedFunctionScope(vec, tfscope);
 
-			Builder.SetInsertPoint(fscope->getLLVMBasicBlock(scope_));
+				//throw "N_IMPL";
+			}
+			auto v = process_expression(tfscope, n->body()->body());
+
+			Builder.SetInsertPoint(tfscope->getLLVMBasicBlock(tfscope));
 
 			Builder.CreateRet(v);
 			if (fscope->type() == scope_type::function) {
-				auto F = static_cast<FunctionScope*>(fscope)->getLLVMFunction(scope_);
-				llvm::verifyFunction(*F);
+				//auto rfs=static_cast<FunctionScope*>(fscope);
+				//rfs->addTypedFunctionScope();
+				auto F = tfscope->getLLVMFunction();
+				//llvm::verifyFunction(*F);
+				//throw "NIMPL";
 			}
 			else {
 				throw "not function";

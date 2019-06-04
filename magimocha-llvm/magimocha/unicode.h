@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <string>
 #include <locale>
@@ -16,7 +17,7 @@ namespace tig::magimocha {
 		internal.resize(to_next - &internal[0]);
 		return internal;
 	}*/
-	std::string to_string(const std::u32string& external)
+	static std::string to_string(const std::u32string& external)
 	{
 		std::locale::global(std::locale("en_US.utf8"));
 		auto& f = std::use_facet<std::codecvt<char, char32_t, std::mbstate_t>>(std::locale());

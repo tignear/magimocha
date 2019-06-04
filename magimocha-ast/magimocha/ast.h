@@ -4,6 +4,7 @@
 #include <optional>
 #include <variant>
 #include <list>
+#include <stdexcept>
 namespace tig::magimocha {
 	namespace ast {
 		enum class leaf_type {
@@ -62,7 +63,6 @@ namespace tig::magimocha {
 			}
 		};
 		struct var_type_data final :public type_data {
-			std::shared_ptr<type_data> type_data;
 			var_type_data() = default;
 			type_data_type type()const override {
 				return type_data_type::var;
@@ -141,14 +141,14 @@ namespace tig::magimocha {
 		class declaration_function final :public expression,public module_member{
 			std::vector<std::shared_ptr<declaration_parameter>> params_;
 			std::shared_ptr<expression> body_;
-			std::shared_ptr<type_data> type_data_;
+			std::shared_ptr<function_type_data> type_data_;
 		public:
 			leaf_type type()const override {
 				return leaf_type::declaration_function;
 			}
 			 declaration_function(
 				std::vector<std::shared_ptr<declaration_parameter>> params,
-				 std::shared_ptr<type_data> type_data,
+				 std::shared_ptr<function_type_data> type_data,
 				std::shared_ptr<expression> body
 			) :params_(params),type_data_(type_data), body_(body) {
 
@@ -160,7 +160,10 @@ namespace tig::magimocha {
 				return body_;
 			}
 			std::shared_ptr<type_data> return_type()override {
-				throw type_data_;
+				return type_data_;
+			}
+			std::shared_ptr<function_type_data> return_type_func() {
+				return type_data_;
 			}
 			
 		};
@@ -185,6 +188,9 @@ namespace tig::magimocha {
 			}
 			std::shared_ptr<type_data> return_type()override {
 				return body_->return_type();
+			}
+			std::shared_ptr<function_type_data> return_type_func() {
+				return  body_->return_type_func();
 			}
 		};
 		struct literal_ :public expression {
@@ -302,7 +308,7 @@ namespace tig::magimocha {
 		};
 		class call_name final :public expression {
 			std::u32string value_;
-			std::shared_ptr<type_data> type_data_;
+			std::shared_ptr<type_data> type_data_= std::make_shared<var_type_data>();
 		public:
 			leaf_type type()const override {
 				return leaf_type::call_name;
@@ -383,7 +389,7 @@ namespace tig::magimocha {
 		>;
 		class operation :public expression {
 			std::list<operator_token_type> op_;
-			std::shared_ptr<type_data> type_data_;
+			std::shared_ptr<type_data> type_data_ = std::make_shared<ast::var_type_data>();
 		public:
 			leaf_type type()const override {
 				return leaf_type::operation;

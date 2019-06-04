@@ -1009,23 +1009,35 @@ namespace tig::magimocha {
 							cppcp::join(
 								cppcp::skip(underbar()),
 								skip_optinal_whitespace(),
-								type_attr(),
+								cppcp::option(type_attr()),
 								skip_optinal_whitespace()
 							)
 						),
 						[](auto&& e) {
-							return std::make_shared<ast::declaration_parameter>(e);
+							if (e) {
+								return std::make_shared<ast::declaration_parameter>(e.value());
+							}
+							else {
+								return std::make_shared<ast::declaration_parameter>(std::make_shared<ast::var_type_data>());
+							}
 						}
 					),
 					cppcp::map(
 						cppcp::join(
 							identifier(),
 							skip_optinal_whitespace(),
-							type_attr(),
+							cppcp::option(type_attr()),
 							skip_optinal_whitespace()
 						),
 						[](auto&& e) {
-							return std::make_shared<ast::declaration_parameter>(std::get<0>(e),std::get<1>(e));
+							auto&& opt_ta = std::get<1>(e);
+							if (opt_ta) {
+								return std::make_shared<ast::declaration_parameter>(std::get<0>(e), opt_ta.value());
+
+							}
+							else {
+								return std::make_shared<ast::declaration_parameter>(std::get<0>(e),std::make_shared<ast::var_type_data>());
+							}
 						}
 					)
 					);

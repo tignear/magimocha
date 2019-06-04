@@ -315,7 +315,7 @@ TEST(MagiMocha, identifier_head) {
 
 TEST(MagiMocha, declation_lambda_arg2) {
 	using namespace std::string_literals;
-	std::u32string str = U"&(x,y)1+1"s;
+	std::u32string str = U"\\(x,y)->1+1"s;
 
 	auto p = x::declaration_lambda();
 	auto br = p(src{ cbegin(str),cend(str) });
@@ -325,7 +325,7 @@ TEST(MagiMocha, declation_lambda_arg2) {
 }
 TEST(MagiMocha, declation_lambda_arg_0) {
 	using namespace std::string_literals;
-	std::u32string s = U"&()1+1";
+	std::u32string s = U"\\()->1+1";
 
 	auto p = x::declaration_lambda();
 	EXPECT_TRUE(p(src{ cbegin(s),cend(s) }).get()->params().empty());
@@ -333,7 +333,7 @@ TEST(MagiMocha, declation_lambda_arg_0) {
 }
 TEST(MagiMocha, declation_lambda_arg_ignore) {
 	using namespace std::string_literals;
-	std::u32string s = U"&(_,_)1+1";
+	std::u32string s = U"\\(_,_)->1+1";
 
 	auto p = x::declaration_lambda();
 	auto r = p(src{ cbegin(s),cend(s) }).get();
@@ -344,7 +344,7 @@ TEST(MagiMocha, declation_lambda_arg_ignore) {
 }
 TEST(MagiMocha, declaration_lambda_bad) {
 	using namespace std::string_literals;
-	std::u32string s = U"&(x,)";
+	std::u32string s = U"\\(x,)";
 
 	auto p = x::declaration_lambda();
 	EXPECT_THROW(p(src{ cbegin(s),cend(s) }).get(),tig::magimocha::unexpected_token_exception);
@@ -352,7 +352,7 @@ TEST(MagiMocha, declaration_lambda_bad) {
 }
 TEST(MagiMocha, declaration_lambda_bad2) {
 	using namespace std::string_literals;
-	std::u32string s = U"&(0x,x)";
+	std::u32string s = U"\\(0x,x)";
 
 	auto p = x::declaration_lambda();
 	EXPECT_THROW(p(src{ cbegin(s),cend(s) }).get(), tig::magimocha::unexpected_token_exception);
@@ -376,7 +376,7 @@ TEST(MagiMocha, expression) {
 
 	auto p = x::expression();
 	auto r = p(src{ cbegin(s),cend(s) }).get();
-	EXPECT_TRUE(r->type()==ast::leaf_type::apply_function);
+	EXPECT_TRUE(r->type()==ast::leaf_type::operation);
 
 }
 
