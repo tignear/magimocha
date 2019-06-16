@@ -9,9 +9,10 @@ download_project(PROJ googletest
 )
 #add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
 
-add_executable(magimocha-test "magimocha-test.cpp")
+add_executable(magimocha-test "magimocha-test.cpp" "typing-test.cpp")
 
-target_link_libraries(magimocha-test gtest_main magimocha-ast)
+
+target_link_libraries(magimocha-test gtest_main magimocha-ast magimocha-typer)
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
 include(GoogleTest)

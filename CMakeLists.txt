@@ -13,4 +13,7 @@ project ("magimocha-distribution")
 # サブプロジェクトを含めます。
 add_subdirectory ("magimocha-ast")
 add_subdirectory ("magimocha-llvm")
+add_subdirectory ("magimocha-typer")
+
 add_subdirectory ("magimocha-test")
+

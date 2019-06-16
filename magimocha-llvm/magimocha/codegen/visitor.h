@@ -28,15 +28,15 @@ namespace tig::magimocha::codegen {
 
 		}
 		
-		auto visit(std::shared_ptr<ast::signed_number_literal> n) {
+		auto  operator()(std::shared_ptr<ast::signed_number_literal> n) {
 			return llvm::ConstantInt::get(TheContext, llvm::APInt(64, n->value(), true));
 
 		}
-		auto visit(std::shared_ptr<ast::unsigned_number_literal> n) {
+		auto  operator()(std::shared_ptr<ast::unsigned_number_literal> n) {
 			return llvm::ConstantInt::get(TheContext, llvm::APInt(64, n->value()));
 
 		}
-		auto visit(std::shared_ptr<ast::floating_literal> n) {
+		auto  operator()(std::shared_ptr<ast::floating_literal> n) {
 			return llvm::ConstantFP::get(TheContext, llvm::APFloat(n->value()));
 
 		}
@@ -51,12 +51,12 @@ namespace tig::magimocha::codegen {
 		std::list<ast::operator_token_type> processing_apply_function(const std::list<typename ast::operator_token_type>& tokens);
 		std::list<ast::operator_token_type> processing_single_operator(std::list<typename ast::operator_token_type>&& e);
 		std::shared_ptr<ast::expression> processing_double_operator(std::list<typename ast::operator_token_type>&& tokens);
-		auto visit(std::shared_ptr<ast::operation> n) {
+		auto  operator()(std::shared_ptr<ast::operation> n) {
 			auto expr = processing_double_operator(processing_single_operator(processing_apply_function(n->value())));
 			unify(scope_, n->return_type(), expr->return_type());
 			return process_expression(*this, scope_,expr);
 		}
-		llvm::Value* visit(std::shared_ptr<ast::apply_function> n) {
+		llvm::Value* operator()(std::shared_ptr<ast::apply_function> n) {
 			auto target = n->target();
 			if (target->type() == ast::leaf_type::call_name) {
 				return scope_->getSymbolInfo(std::static_pointer_cast<ast::call_name>(target)->value())->receive(scope_,n);
@@ -70,7 +70,7 @@ namespace tig::magimocha::codegen {
 			Builder.SetInsertPoint(scope_->getLLVMBasicBlock(scope_));
 			return Builder.CreateCall(x, llvm_args, "lambda_calltmp");
 		}
-		auto visit(std::shared_ptr<ast::named_function> n) {
+		auto  operator()(std::shared_ptr<ast::named_function> n) {
 
 			auto s=scope_->getChildScope(n->name());
 			if (s->type() != scope_type::function) {
@@ -87,10 +87,10 @@ namespace tig::magimocha::codegen {
 			
 			return F;
 		}
-		auto visit(std::shared_ptr<ast::call_name> n) {
+		auto  operator()(std::shared_ptr<ast::call_name> n) {
 			return scope_->getSymbolInfo(n->value())->receive(scope_, n);
 		}
-		auto visit(std::shared_ptr<ast::expression_block> n) {
+		auto  operator()(std::shared_ptr<ast::expression_block> n) {
 			auto&& name=scope_->generateUniqueName();
 			llvm::BasicBlock* BB = scope_->getLLVMBasicBlock(scope_);
 			auto bs=BlockScope::create(scope_,name,BB);
@@ -102,7 +102,7 @@ namespace tig::magimocha::codegen {
 
 			return v;
 		}
-		auto visit(std::shared_ptr<ast::declaration_variable> v) {
+		auto  operator()(std::shared_ptr<ast::declaration_variable> v) {
 			auto&& name = v->name();
 			auto&& expr=process_expression(scope_, v->body());
 			struct Val :SymbolInfo {
@@ -119,7 +119,7 @@ namespace tig::magimocha::codegen {
 			scope_->addSymbolInfo(name,std::make_shared<Val>(expr));
 			return expr;
 		}
-		auto visit(std::shared_ptr<ast::expression> n) {
+		auto  operator()(std::shared_ptr<ast::expression> n) {
 			throw "not implemented";
 			return nullptr;
 		}
@@ -131,7 +131,7 @@ namespace tig::magimocha::codegen {
 	public:
 		module_visitor(Scope* s) :scope_(s) {}
 
-		std::nullptr_t visit(std::shared_ptr<ast::declaration_module> n) {
+		std::nullptr_t  operator()(std::shared_ptr<ast::declaration_module> n) {
 			for (auto&& member : n->members()) {
 				process_module(scope_->getChildScope(n->name()) , member);
 
@@ -139,15 +139,15 @@ namespace tig::magimocha::codegen {
 			return nullptr;
 
 		}
-		std::nullptr_t visit(std::shared_ptr<ast::declaration_variable> n) {
+		std::nullptr_t  operator()(std::shared_ptr<ast::declaration_variable> n) {
 			return nullptr;
 
 		}
-		std::nullptr_t visit(std::shared_ptr<ast::declaration_export>n) {
+		std::nullptr_t  operator()(std::shared_ptr<ast::declaration_export>n) {
 			return nullptr;
 
 		}
-		std::nullptr_t visit(std::shared_ptr<ast::named_function>n) {
+		std::nullptr_t  operator()(std::shared_ptr<ast::named_function>n) {
 
 			auto expect_fscope = scope_->getChildScope(n->name());
 			if (expect_fscope->type() != scope_type::function) {

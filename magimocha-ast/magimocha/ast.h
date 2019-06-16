@@ -84,7 +84,7 @@ namespace tig::magimocha {
 			virtual std::shared_ptr<type_data> return_type() = 0;
 			//virtual void set_return_type(std::shared_ptr<type_data>) = 0;
 		};
-		struct expression :public virtual typed_data {
+		struct expression :public typed_data {
 			
 		};
 		struct module_member :public virtual ast_base {};
@@ -282,7 +282,7 @@ namespace tig::magimocha {
 		class apply_function final :public expression {
 			std::shared_ptr<expression> target_;
 			std::vector< std::shared_ptr<expression>> args_;
-			
+			std::shared_ptr<type_data> return_type_ = std::make_shared<var_type_data>();
 		public:
 			leaf_type type()const override {
 				return leaf_type::apply_function;
@@ -291,7 +291,7 @@ namespace tig::magimocha {
 
 			}
 			std::shared_ptr<type_data> return_type()override {
-				return target_->return_type();
+				return return_type_;
 			}
 			const auto& target()const {
 				return target_;
@@ -307,16 +307,16 @@ namespace tig::magimocha {
 			}
 		};
 		class call_name final :public expression {
-			std::u32string value_;
+			string_type value_;
 			std::shared_ptr<type_data> type_data_= std::make_shared<var_type_data>();
 		public:
 			leaf_type type()const override {
 				return leaf_type::call_name;
 			}
-			 call_name(const std::u32string& value) :value_(value) {
+			 call_name(const string_type& value) :value_(value) {
 
 			}
-			 const std::u32string& value()const {
+			 const string_type& value()const {
 				return value_;
 			}
 			std::shared_ptr<type_data> return_type()override {
@@ -325,7 +325,7 @@ namespace tig::magimocha {
 		};
 		class expression_block :public expression {
 			std::vector<std::shared_ptr<expression>> expressions_;
-			std::shared_ptr<type_data> type_data_;
+			std::shared_ptr<type_data> type_data_=std::make_shared<var_type_data>();
 		public:
 			leaf_type type()const override {
 				return leaf_type::expression_block;

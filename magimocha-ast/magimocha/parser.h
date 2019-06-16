@@ -835,9 +835,9 @@ namespace tig::magimocha {
 							block(anyc(), 0x3004, 0x3007),
 							block(anyc(), 0x3021, 0x302F),
 							block(anyc(), 0x3031, 0x303F),
-							block(anyc(), 0x3040, 0xD7FF)
-						),
-						cppcp::trys(
+							block(anyc(), 0x3040, 0xD7FF),
+						//),
+						//cppcp::trys(
 							block(anyc(), 0xF900, 0xFD3D),
 							block(anyc(), 0xFD40, 0xFDCF),
 							block(anyc(), 0xFDF0, 0xFE1F),

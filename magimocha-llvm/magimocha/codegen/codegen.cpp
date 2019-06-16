@@ -161,7 +161,7 @@ namespace tig::magimocha::codegen {
 				s->addChildScope(n->name(),fscope);
 				return std::monostate{};
 			}
-			std::monostate visit(std::shared_ptr<ast::expression>) {
+			std::monostate  operator()(std::shared_ptr<ast::expression>) {
 				return std::monostate{};
 			}
 		};
@@ -178,7 +178,7 @@ namespace tig::magimocha::codegen {
 				}
 				this->s = s;
 			}
-			std::monostate visit(std::shared_ptr<ast::declaration_module> n) {
+			std::monostate  operator()(std::shared_ptr<ast::declaration_module> n) {
 				Scope* ms;
 				ms = s->getChildScope(n->name());
 				if (ms == nullptr) {
@@ -194,7 +194,7 @@ namespace tig::magimocha::codegen {
 				return std::monostate{};
 
 			}
-			std::monostate visit(std::shared_ptr<ast::named_function> n) {
+			std::monostate  operator()(std::shared_ptr<ast::named_function> n) {
 				auto&& ty_func = n->return_type_func();
 				auto&& params = n->body()->params();
 				//llvm::FunctionType*FT = type2llvmType(s,ty_func);
@@ -295,7 +295,7 @@ namespace tig::magimocha::codegen {
 				s->addChildScope(n->name(), fscope);
 				return std::monostate{};
 			}
-			std::monostate visit(std::shared_ptr<ast::module_member>) {
+			std::monostate  operator()(std::shared_ptr<ast::module_member>) {
 				return std::monostate{};
 			}
 		};

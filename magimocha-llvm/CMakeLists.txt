@@ -14,7 +14,6 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
-
 # Find the libraries that correspond to the LLVM components
 # that we wish to use
 llvm_map_components_to_libnames(
@@ -38,3 +37,4 @@ add_executable(
 
 target_link_libraries(magimocha-llvm magimocha-ast ${llvm_libs})
 set (CMAKE_EXE_LINKER_FLAGS "/STACK:10000000" )
+add_compile_options(/wd4267)
