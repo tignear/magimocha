@@ -1,6 +1,5 @@
 #pragma once
 #include <unordered_map>
-#include "enviroment.h"
 #include "magimocha/ast.h"
 #include "magimocha/ast-visitor.h"
 namespace tig::magimocha::codegen2 {
