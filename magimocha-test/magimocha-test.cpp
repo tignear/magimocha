@@ -360,6 +360,26 @@ TEST(MagiMocha, named_function_expression_scope) {
 	auto r = p(src{ cbegin(s),cend(s) }).get();
 
 }
+
+TEST(MagiMocha, expression_block) {
+	using namespace std::string_literals;
+
+	std::u32string s = U"{def id(x) = x,val r=32,r}";
+	auto p = x::expression_block();
+	auto r = p(src{ cbegin(s),cend(s) }).get();
+	EXPECT_TRUE(r);
+	EXPECT_EQ(r->type(), ast::leaf_type::expression_block);
+	auto rr = std::static_pointer_cast<ast::expression_block>(r);
+	const auto& vec=rr->value();
+	EXPECT_EQ(vec.size(), 3);
+	EXPECT_EQ(vec[0]->type(), ast::leaf_type::named_function);
+	EXPECT_EQ(vec[1]->type(), ast::leaf_type::declaration_variable);
+	EXPECT_EQ(vec[2]->type(), ast::leaf_type::operation);
+	auto v2v = std::static_pointer_cast<ast::operation>(vec[2]);
+
+	EXPECT_EQ(v2v->value().size(),1);
+	EXPECT_TRUE(std::holds_alternative<std::shared_ptr <ast::call_name >>(v2v->value().front()));
+}
 TEST(MagiMocha, nyan) {
 	std::tuple<
 		std::string,

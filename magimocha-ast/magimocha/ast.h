@@ -256,7 +256,7 @@ namespace tig::magimocha {
 			 floating_literal(double value) :value_(value) {
 
 			}
-			 const double value()const {
+			double value()const {
 				return value_;
 			}
 			std::shared_ptr<type_data> return_type()override {

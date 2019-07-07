@@ -80,12 +80,17 @@ namespace tig::magimocha::typing {
 			map.insert_or_assign(k,v);
 		}
 	};
+	struct context {
+		std::shared_ptr<variable_table> vars;
+		std::shared_ptr<type_table> types;
+		std::shared_ptr<type_schema_table> schemas;
+	};
 	std::shared_ptr<ast::type_data> replace_types(
+		std::shared_ptr<type_table> types,
 		std::shared_ptr<ast::type_data> type_data,
-		const std::unordered_map<std::shared_ptr<ast::type_data>,
-		std::shared_ptr<ast::type_data>>& map
+		const std::unordered_map<std::shared_ptr<ast::type_data>,std::shared_ptr<ast::type_data>>& map
 	);
-	inline static type_schema create_type_schema_from(type_schema ts) {
+	inline static type_schema create_type_schema_from(std::shared_ptr<type_table> types,type_schema ts) {
 		std::unordered_map<std::shared_ptr<ast::type_data>, std::shared_ptr<ast::type_data>> map;
 		std::unordered_set<std::shared_ptr<ast::var_type_data>> set;
 		for (auto&& var:ts.type_vars) {
@@ -93,11 +98,16 @@ namespace tig::magimocha::typing {
 			map.insert(std::make_pair(var,nvar));
 			set.insert(nvar);
 		}
-		return type_schema{ set,replace_types(ts.type_data,map) };
+		return type_schema{ set,replace_types(types,ts.type_data,map) };
 	}
 
 	//void unify(std::shared_ptr<type_table> table, std::shared_ptr<ast::type_data> t1, std::shared_ptr<ast::type_data> t2);
 	std::shared_ptr<ast::type_data> resolve_type(std::shared_ptr<type_table> table, std::shared_ptr<ast::type_data> t,std::unordered_set<std::shared_ptr<ast::var_type_data>>& free);
+	static inline std::shared_ptr<ast::type_data> resolve_type(std::shared_ptr<type_table> table, std::shared_ptr<ast::type_data> t) {
+		std::unordered_set<std::shared_ptr<ast::var_type_data>> ig;
+		return resolve_type(table, t, ig);
+	}
+	std::shared_ptr<ast::typed_data> resolve_name(std::shared_ptr<variable_table> vars, std::shared_ptr<ast::typed_data> t);
 	static inline type_schema create_type_schema(std::shared_ptr<type_table> types, std::shared_ptr<ast::type_data> t) {
 		std::unordered_set<std::shared_ptr<ast::var_type_data>> free_vars;
 		resolve_type(types, t, free_vars);
@@ -107,9 +117,7 @@ namespace tig::magimocha::typing {
 	void unify(std::shared_ptr<type_table> table, std::shared_ptr<ast::type_data> t1, std::shared_ptr<ast::type_data> t2);
 
 	std::shared_ptr<ast::type_data> infer(
-		std::shared_ptr<variable_table> vars,
-		std::shared_ptr<type_table> types,
-		std::shared_ptr<type_schema_table> schemas,
-		std::shared_ptr<ast::typed_data> td
+		context con,
+		std::shared_ptr<ast::expression> td
 	);
 }
