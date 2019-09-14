@@ -60,7 +60,7 @@ namespace tig::magimocha {
 
 
 			template<class V>
-			static constexpr auto bs2ull(V v,size_t* idx=nullptr,int base=10) {
+			static auto bs2ull(V v,size_t* idx=nullptr,int base=10) {
 				std::string s;
 				s.reserve(v.length());
 				for (auto x : v)
@@ -75,7 +75,7 @@ namespace tig::magimocha {
 				return std::stoull(s, idx, base);
 			}
 			template<class V>
-			static constexpr auto bs2d(V v, size_t* idx = nullptr) {
+			static auto bs2d(V v, size_t* idx = nullptr) {
 				std::string s;
 				s.reserve(v.length());
 				for (auto x : v)
@@ -102,133 +102,136 @@ namespace tig::magimocha {
 
 
 
-			static constexpr impl::any<Itr> anyc() {
+			static impl::any<Itr> anyc() {
 				static const auto c = impl::any<Itr>();
 				return c;
 			}
 
-			static constexpr auto any() {
+			static auto any() {
 				static const auto c = cppcp::map(anyc(), [](auto e) {
 					return std::basic_string<typename cppcp::result_type_t<decltype(anyc())>>{e};
 				});
 				return c;
 
 			}
-			static constexpr auto nullc() {
+			static auto nullc() {
 				static const auto c = impl::unicodeChar(anyc(), 0x00);
 				return c;
 			}
-			static constexpr auto CR() {
+			static auto CR() {
 				static const auto c = impl::unicodeChar(anyc(), 0x0D);
 				return c;
 			}
-			static constexpr auto LF() {
+			static auto LF() {
 				static const auto c = impl::unicodeChar(anyc(), 0x0A);
 				return c;
 			}
-			static constexpr auto slash() {
+			static auto slash() {
 				static const auto c = impl::unicodeChar(anyc(), U'/');
 				return c;
 			}
-			static constexpr auto backslash() {
+			static auto backslash() {
 				static const auto c = impl::unicodeChar(anyc(), U'\\');
 				return c;
 			}
-			static constexpr auto double_quote() {
+			static auto double_quote() {
 				static const auto c = impl::unicodeChar(anyc(), U'\"');
 				return c;
 			}
-			static constexpr auto sharp() {
+			static auto sharp() {
 				return impl::unicodeChar(anyc(), U'#');
 			}
-			static constexpr auto plus() {
+			static auto plus() {
 				return impl::unicodeChar(anyc(), U'+');
 			}
-			static constexpr auto minus() {
+			static auto minus() {
 				return impl::unicodeChar(anyc(), U'-');
 			}
 
-			static constexpr auto exclamation() {
+			static auto exclamation() {
 				return impl::unicodeChar(anyc(), U'!');
 			}
-			static constexpr auto percent() {
+			static auto percent() {
 				return impl::unicodeChar(anyc(), U'%');
 			}
-			static constexpr auto angle_open() {
+			static auto angle_open() {
 				return impl::unicodeChar(anyc(), U'<');
 			}
-			static constexpr auto angle_close() {
+			static auto angle_close() {
 				return impl::unicodeChar(anyc(), U'>');
 			}
-			static constexpr auto asterisk() {
+			static auto asterisk() {
 				return impl::unicodeChar(anyc(), U'*');
 			}
-			static constexpr auto underbar() {
+			static auto underbar() {
 				return impl::unicodeChar(anyc(), U'_');
 			}
-			static constexpr auto and () {
+			static auto and_ () {
 				return impl::unicodeChar(anyc(), U'&');
 			}
-			static constexpr auto or () {
+			static auto or_ () {
 				return impl::unicodeChar(anyc(), U'|');
 			}
-			static constexpr auto caret() {
+			static auto caret() {
 				return impl::unicodeChar(anyc(), U'^');
 			}
-			static constexpr auto tilde() {
+			static auto tilde() {
 				return impl::unicodeChar(anyc(), U'~');
 			}
-			static constexpr auto question() {
+			static auto question() {
 				return impl::unicodeChar(anyc(), U'?');
 			}
-			static constexpr auto parenthesis_open() {
+			static auto parenthesis_open() {
 				return impl::unicodeChar(anyc(), U'(');
 			}
-			static constexpr auto parenthesis_close() {
+			static auto parenthesis_close() {
 				return impl::unicodeChar(anyc(), U')');
 			}
-			static constexpr auto comma() {
+			static auto comma() {
 				return impl::unicodeChar(anyc(), U',');
 			}
-			static constexpr auto equal() {
+			static auto equal() {
 				return impl::unicodeChar(anyc(), U'=');
 			}
-			static constexpr auto dot() {
+			static auto dot() {
 				return impl::unicodeChar(anyc(), U'.');
 			}
-			static constexpr auto  braces_open() {
+			static auto  braces_open() {
 				return impl::unicodeChar(anyc(), U'{');
 			}
-			static constexpr auto  braces_close() {
+			static auto  braces_close() {
 				return impl::unicodeChar(anyc(), U'}');
 			}
-			static constexpr auto colon() {
+			static auto colon() {
 				return impl::unicodeChar(anyc(), U':');
 			}
-			static constexpr auto skip_optinal_whitespace() {
+			static auto semicolon() {
+				return impl::unicodeChar(anyc(), U';');
+			}
+			static auto skip_optinal_whitespace() {
 				return cppcp::skip(cppcp::option(whitespace()));
 			}
 			template<class P>
-			static constexpr auto c2s(P p) {
+			static auto c2s(P p) {
 				return cppcp::map(p, [](const auto& v) {
 					return std::basic_string<cppcp::result_type_t<P>>({ v });
 				});
 			}
 
 			template<class P>
-			static constexpr auto s2ull(P p, int base = 10) {
+			static auto s2ull(P p, int base = 10) {
 				return cppcp::map(p, [](const string_type& v) {
 					return impl::bs2ull(v);
 				});
 			}
-			static constexpr auto CRLF() {
+			static auto CRLF() {
 				return cppcp::map(
 					cppcp::join(c2s(CR()), c2s(LF())), [](const auto& e)->string_type {
 					return string_type{ 0x0D ,0x0A };
 				}
 				);
 			}
-			static constexpr auto line_break() {
+			static auto line_break() {
 				return cppcp::make_catching<cppcp::all_of_parser_failed_exception>(
 					cppcp::trys(
 						CRLF(), c2s(CR()), c2s(LF())
@@ -236,7 +239,7 @@ namespace tig::magimocha {
 					[](const auto& e)->string_type {throw tig::magimocha::unexpected_token_exception(); }
 				);
 			}
-			static constexpr auto single_line_comment() {
+			static auto single_line_comment() {
 				using namespace std::string_literals;
 				static const auto cache = cppcp::map(
 					cppcp::join(
@@ -259,7 +262,7 @@ namespace tig::magimocha {
 				);
 				return cache;
 			}
-			constexpr static cppcp::type_eraser<Itr, string_type> multi_line_comment() {
+			static cppcp::type_eraser<Itr, string_type> multi_line_comment() {
 				static const auto cache = cppcp::map(
 					cppcp::join(
 						cppcp::map(cppcp::join(slash(), asterisk()), [](const auto&e) {
@@ -287,7 +290,7 @@ namespace tig::magimocha {
 				);
 				return cache;
 			}
-			constexpr static auto whitespace_item() {
+			static auto whitespace_item() {
 				static const constexpr auto single = impl::unicodeChar<decltype(anyc())>;
 				static const auto cache = cppcp::trys(
 					c2s(single(anyc(), 0x0000)),
@@ -301,7 +304,7 @@ namespace tig::magimocha {
 				);
 				return cache;
 			}
-			constexpr static auto whitespace() {
+			static auto whitespace() {
 				static const auto cache = cppcp::manyN(
 					cppcp::sup<Itr, string_type>(string_type()),
 					whitespace_item(),
@@ -797,9 +800,9 @@ namespace tig::magimocha {
 			/*
 			* identifiers
 			*/
-			constexpr static auto identifier_head() {
-				static const constexpr auto block = impl::unicodeBlock<decltype(anyc())>;
-				static const constexpr auto single = impl::unicodeChar<decltype(anyc())>;
+			static auto identifier_head() {
+				static const auto block = impl::unicodeBlock<decltype(anyc())>;
+				static const auto single = impl::unicodeChar<decltype(anyc())>;
 				//何故かMSVCでSEHが出るので回避
 				return
 					cppcp::trys(
@@ -861,9 +864,9 @@ namespace tig::magimocha {
 
 				);
 			}
-			constexpr static auto identifier_character() {
-				static const constexpr auto block = impl::unicodeBlock<decltype(anyc())>;
-				static const constexpr auto single = impl::unicodeChar<decltype(anyc())>;
+			static auto identifier_character() {
+				static const auto block = impl::unicodeBlock<decltype(anyc())>;
+				static const  auto single = impl::unicodeChar<decltype(anyc())>;
 				return cppcp::trys(
 					block(anyc(), U'0', U'9'),
 					block(anyc(), 0x0300, 0x036F),
@@ -873,7 +876,7 @@ namespace tig::magimocha {
 					identifier_head()
 				);
 			}
-			constexpr static auto identifier_characters() {
+			static auto identifier_characters() {
 				return cppcp::many(
 					cppcp::sup<Itr>(string_type()),
 					identifier_character(),
@@ -883,7 +886,7 @@ namespace tig::magimocha {
 					}
 				);
 			}
-			constexpr static auto identifier() {
+			static auto identifier() {
 				return cppcp::trys(
 					cppcp::map(cppcp::join(identifier_head(), identifier_characters()), [](const auto& e) {
 						return string_type{ {std::get<0>(e)} }+std::get<1>(e);
@@ -893,9 +896,9 @@ namespace tig::magimocha {
 					})
 					);
 			}
-			constexpr static auto implicit_parameter_name() {
-				static const constexpr auto block = impl::unicodeBlock<decltype(anyc())>;
-				static const constexpr auto single = impl::unicodeChar<decltype(anyc())>;
+			static auto implicit_parameter_name() {
+				static const auto block = impl::unicodeBlock<decltype(anyc())>;
+				static const auto single = impl::unicodeChar<decltype(anyc())>;
 				return cppcp::map(
 					cppcp::join(
 						single(anyc(), '$'),
@@ -909,10 +912,10 @@ namespace tig::magimocha {
 			/*
 			* operators
 			*/
-			constexpr static auto op_head() {
-				static const constexpr auto block = impl::unicodeBlock<decltype(anyc())>;
-				static const constexpr auto single = impl::unicodeChar<decltype(anyc())>;
-				static constexpr auto cache = cppcp::trys(
+			static auto op_head() {
+				static const auto block = impl::unicodeBlock<decltype(anyc())>;
+				static const auto single = impl::unicodeChar<decltype(anyc())>;
+				static auto cache = cppcp::trys(
 					slash(),
 					equal(),
 					minus(),
@@ -922,8 +925,8 @@ namespace tig::magimocha {
 					percent(),
 					angle_open(),
 					angle_close(),
-					and (),
-					or (),
+					and_(),
+					or_(),
 					caret(),
 					tilde(),
 					question(),
@@ -951,9 +954,9 @@ namespace tig::magimocha {
 				);
 				return cache;
 			}
-			constexpr static auto op_character() {
-				static const constexpr auto block = impl::unicodeBlock<decltype(anyc())>;
-				static const constexpr auto single = impl::unicodeChar<decltype(anyc())>;
+			static auto op_character() {
+				static const auto block = impl::unicodeBlock<decltype(anyc())>;
+				static const auto single = impl::unicodeChar<decltype(anyc())>;
 				return cppcp::trys(
 					block(anyc(), 0x0300, 0x036F),
 					block(anyc(), 0x1DC0, 0x1DFF),
@@ -1078,7 +1081,7 @@ namespace tig::magimocha {
 				);
 			}
 			
-			constexpr static auto declaration_lambda() {
+			static auto declaration_lambda() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(backslash()),
@@ -1175,7 +1178,7 @@ namespace tig::magimocha {
 										cppcp::skip(
 											cppcp::trys(
 												line_break(),
-												c2s(comma())
+												c2s(semicolon())
 											)
 										),
 										skip_optinal_whitespace(),
@@ -1191,7 +1194,7 @@ namespace tig::magimocha {
 							)
 						),
 						[](auto&& e) {
-							return std::static_pointer_cast<ast::expression>(std::make_shared<ast::expression_block>(std::move(e)));
+							return std::make_shared<ast::expression_block>(std::move(e));
 						}
 					)
 				);
@@ -1283,7 +1286,7 @@ namespace tig::magimocha {
 				start, single_operator, double_operator, declation_lambda, literal_, apply_function, call_name, expression_block, end
 
 			};
-			static constexpr auto operator_tokenizer() {
+			static auto operator_tokenizer() {
 				using s = operator_tokenizer_sw;
 				using val_type = ast::operator_token_type;
 				static auto cache= cppcp::state_machine_parser(
@@ -1432,12 +1435,19 @@ namespace tig::magimocha {
 								}
 							),
 							cppcp::map(
+								declaration_infix(),
+								[](auto&& e) {
+									return std::static_pointer_cast<ast::expression>(e);
+								}
+							),
+							cppcp::map(
 								operator_tokenizer(),
 								[](auto&& e)->std::shared_ptr<ast::expression > {
 									return std::make_shared<ast::operation>(std::move(e));
 									//return processing_double_operator(processing_single_operator(processing_apply_function(std::move(e))));
 								}
 							)
+
 						); 
 					}
 				);
@@ -1498,7 +1508,8 @@ namespace tig::magimocha {
 			}
 			static constexpr cppcp::type_eraser<Itr,std::shared_ptr<ast::module_member>> module_members_item() {
 				return cppcp::trys(
-					named_function_module_scope()
+					named_function_module_scope(),
+					declaration_infix()
 				);
 			}
 			static constexpr auto module_members() {
@@ -1531,6 +1542,59 @@ namespace tig::magimocha {
 					[](auto&& e) {
 					//std::vector<std::shared_ptr<ast::module_member>> vect = ;
 						return std::make_shared<ast::declaration_module>(std::get<0>(e), std::move(std::get<1>(e)));
+					}
+				);
+			}
+			static constexpr auto declaration_infix() {
+				return cppcp::map(
+					cppcp::join(
+						cppcp::skip(impl::unicodeChar(anyc(), U'i')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'n')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'f')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'i')),
+						cppcp::skip(impl::unicodeChar(anyc(), U'x')),
+						cppcp::skip(whitespace()),
+						identifier(),
+						cppcp::skip(whitespace()),
+						cppcp::map(
+							cppcp::trys(
+								cppcp::join(
+									impl::unicodeChar(anyc(), U'l'),
+									cppcp::skip(impl::unicodeChar(anyc(), U'e')),
+									cppcp::skip(impl::unicodeChar(anyc(), U'f')),
+									cppcp::skip(impl::unicodeChar(anyc(), U't'))
+								),
+								cppcp::join(
+									impl::unicodeChar(anyc(), U'r'),
+									cppcp::skip(impl::unicodeChar(anyc(), U'i')),
+									cppcp::skip(impl::unicodeChar(anyc(), U'g')),
+									cppcp::skip(impl::unicodeChar(anyc(), U'h')),
+									cppcp::skip(impl::unicodeChar(anyc(), U't'))
+								)
+							),
+							[](auto&& e) {
+								return std::get<0>(e);
+							}
+						),
+						cppcp::skip(whitespace()),
+						decimal_literal_s()
+					),
+					[](auto&& e) {
+						auto ident = std::get<0>(e);
+						auto its = std::get<1>(e);
+						ast::infix_type it;
+						if (its == 'l') {
+							it = ast::infix_type::left;
+						}
+						else if (its == 'r') {
+							it = ast::infix_type::right;
+
+						}
+						else {
+							throw "error:parser internal error.infix type must be left or right.";
+						}
+						auto prio = impl::bs2ull(std::get<2>(e));
+						return std::make_shared<ast::declaration_infix>(ident, it,static_cast<int>(prio));
 					}
 				);
 			}

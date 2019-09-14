@@ -3,7 +3,7 @@
     {
       "name": "x64-Release",
       "generator": "Ninja",
-      "configurationType": "RelWithDebInfo",
+      "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\build\\${name}",
       "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
@@ -11,7 +11,19 @@
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
       "intelliSenseMode": "windows-msvc-x64",
-      "variables": []
+      "variables": [
+        {
+          "name": "LLVM_DIR",
+          "value": "D:\\develop\\llvm-install\\lib\\cmake\\llvm",
+          "type": "FILEPATH"
+        },
+        {
+          "name": "INCLUDE",
+          "value": "${env.INCLUDE};D:\\develop\\llvm-install\\include",
+          "type": "FILEPATH"
+        }
+
+      ]
     }
   ]
 }

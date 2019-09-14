@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.8)
 
 #llvm 
-set(LLVM_DIR "D:\\develop\\llvm-install\\lib\\cmake\\llvm")
+#set(LLVM_DIR "D:\\develop\\llvm-install\\lib\\cmake\\llvm")
 find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")

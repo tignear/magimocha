@@ -138,6 +138,7 @@ namespace tig::magimocha::typing {
 			}
 			R  operator()(std::shared_ptr<ast::declaration_function> df) {
 				auto new_vars = create_variable_table(con.vars);
+				con.typed_data_2_variable_table_table->set(df,new_vars);
 				auto& params = df->params();
 				//std::vecttor<declaration_parameter> newparams;
 				for (auto&& dp : params) {
@@ -205,8 +206,12 @@ namespace tig::magimocha::typing {
 
 				return create_type_schema_from(con.types,schema).type_data;
 			}
+			R operator()(std::shared_ptr<ast::declaration_infix> di) {
+				return di->return_type();
+			}
 		};
-		return ast::visit<R>(visitor{ con}, td);
+		auto vis = visitor{con};
+		return ast::visit<R>(vis, td);
 	}
 	std::shared_ptr<ast::type_data> replace_types(
 		std::shared_ptr<type_table> types,
@@ -243,6 +248,7 @@ namespace tig::magimocha::typing {
 			return std::make_shared<ast::function_type_data>(replace_types(types,ft->result_type, map), args);
 		}
 		}
+		throw "illegal code exception";
 	}
 	std::shared_ptr<variable_table> create_variable_table(std::shared_ptr<variable_table> upper) {
 		using map_t=std::unordered_map<ast::string_type, std::shared_ptr<ast::typed_data>>;

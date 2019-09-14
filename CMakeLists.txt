@@ -3,10 +3,13 @@
 #
 cmake_minimum_required (VERSION 3.8)
 enable_testing()
+#find_program(CMAKE_CXX_CPPCHECK NAMES cppcheck)
 set(CMAKE_CXX_STANDARD 17) 
 set(CMAKE_CXX_STANDARD_REQUIRED ON) 
 set(CMAKE_CXX_EXTENSIONS OFF) 
-
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+endif()
 
 project ("magimocha-distribution")
 
@@ -16,4 +19,3 @@ add_subdirectory ("magimocha-llvm2")
 add_subdirectory ("magimocha-typer")
 
 add_subdirectory ("magimocha-test")
-

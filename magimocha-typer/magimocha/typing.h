@@ -80,10 +80,30 @@ namespace tig::magimocha::typing {
 			map.insert_or_assign(k,v);
 		}
 	};
+	struct typed_data_2_variable_table_table
+	{
+		virtual void set(std::shared_ptr<ast::typed_data> k, std::shared_ptr<variable_table> v)=0;
+		virtual  std::shared_ptr<variable_table> get(std::shared_ptr<ast::typed_data> k) = 0;
+	};
+	struct typed_data_2_variable_table_table_impl:typed_data_2_variable_table_table {
+		std::unordered_map<std::shared_ptr<ast::typed_data>, std::shared_ptr<variable_table>> map;
+		void set(std::shared_ptr<ast::typed_data> k, std::shared_ptr<variable_table> v)override {
+			map.insert_or_assign(k,v);
+		}
+		std::shared_ptr<variable_table> get(std::shared_ptr<ast::typed_data> k)override {
+			auto itr=map.find(k);
+			if (itr == cend(map)) {
+				return std::shared_ptr<variable_table>();
+			}
+			return itr->second;
+		}
+
+	};
 	struct context {
 		std::shared_ptr<variable_table> vars;
 		std::shared_ptr<type_table> types;
 		std::shared_ptr<type_schema_table> schemas;
+		std::shared_ptr<typed_data_2_variable_table_table> typed_data_2_variable_table_table;
 	};
 	std::shared_ptr<ast::type_data> replace_types(
 		std::shared_ptr<type_table> types,
