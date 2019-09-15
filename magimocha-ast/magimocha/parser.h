@@ -23,7 +23,7 @@ namespace tig::magimocha {
 		namespace impl {
 			
 			template<class P>
-			constexpr auto unicodeBlock(P p, typename cppcp::result_type_t<P> s, typename cppcp::result_type_t<P> e) {
+			auto unicodeBlock(P p, typename cppcp::result_type_t<P> s, typename cppcp::result_type_t<P> e) {
 				return cppcp::map(p, 
 					[s,e](auto c_) {
 						if (s<=c_&&c_<=e) {
@@ -34,7 +34,7 @@ namespace tig::magimocha {
 				);
 			}
 			template<class P>
-			constexpr auto unicodeChar(P p,typename cppcp::result_type_t<P> c) {
+			auto unicodeChar(P p,typename cppcp::result_type_t<P> c) {
 				return cppcp::map(p, 
 					[c](auto c_) {
 						if (c_ == c) {
@@ -46,8 +46,8 @@ namespace tig::magimocha {
 			}
 			template<class Src>
 			struct any:public cppcp::parser<Src,  typename Src::value_type,any<Src>> {
-				constexpr any() {}
-				constexpr auto parse(Src&& src)const{
+				any() {}
+				auto parse(Src&& src)const{
 					if (src.is_end()) {
 						throw cppcp::eof_exception();
 					}
@@ -291,7 +291,7 @@ namespace tig::magimocha {
 				return cache;
 			}
 			static auto whitespace_item() {
-				static const constexpr auto single = impl::unicodeChar<decltype(anyc())>;
+				static const auto single = impl::unicodeChar<decltype(anyc())>;
 				static const auto cache = cppcp::trys(
 					c2s(single(anyc(), 0x0000)),
 					c2s(single(anyc(), 0x0009)),
@@ -319,7 +319,7 @@ namespace tig::magimocha {
 			/*
 			type attr
 			*/
-			constexpr static auto type_attr() {
+			static auto type_attr() {
 				return cppcp::map(
 					cppcp::get0(
 						cppcp::join(
@@ -336,14 +336,14 @@ namespace tig::magimocha {
 			*integer literals
 			*/
 
-			constexpr static auto binary_digit() {
+			static auto binary_digit() {
 				return impl::unicodeBlock(anyc(), U'0', U'1');
 			}
 
-			constexpr static auto binary_literal_character() {
+			static auto binary_literal_character() {
 				return cppcp::trys(binary_digit(), underbar());
 			}
-			constexpr static auto binary_literal_characters() {
+			static auto binary_literal_characters() {
 				return cppcp::manyN(
 					cppcp::sup<Itr>(string_type()),
 					binary_literal_character(),
@@ -357,7 +357,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto binary_literal() {
+			static auto binary_literal() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(impl::unicodeChar(anyc(), U'0')),
@@ -370,14 +370,14 @@ namespace tig::magimocha {
 				);
 			}
 
-			constexpr static auto octal_digit() {
+			static auto octal_digit() {
 				return impl::unicodeBlock(anyc(), U'0', U'7');
 			}
 
-			constexpr static auto octal_literal_character() {
+			static auto octal_literal_character() {
 				return cppcp::trys(octal_digit(), underbar());
 			}
-			constexpr static auto octal_literal_characters() {
+			static auto octal_literal_characters() {
 				return cppcp::manyN(
 					cppcp::sup<Itr>(string_type()),
 					octal_literal_character(),
@@ -391,7 +391,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto octal_literal() {
+			static auto octal_literal() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(impl::unicodeChar(anyc(), U'0')),
@@ -405,10 +405,10 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto decimal_digit() {
+			static auto decimal_digit() {
 				return impl::unicodeBlock(anyc(), U'0', U'9');
 			}
-			constexpr static auto  decimal_digits() {
+			static auto  decimal_digits() {
 				return cppcp::many(
 					cppcp::sup<Itr>(string_type()),
 					decimal_digit(), [](auto&& a, const auto& e) {
@@ -420,10 +420,10 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto decimal_literal_character() {
+			static auto decimal_literal_character() {
 				return cppcp::trys(decimal_digit(), underbar());
 			}
-			constexpr static auto decimal_literal_characters() {
+			static auto decimal_literal_characters() {
 				return cppcp::manyN(
 					cppcp::sup<Itr>(string_type()),
 					decimal_literal_character(),
@@ -437,10 +437,10 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto decimal_literal_s() {
+			static auto decimal_literal_s() {
 				return decimal_literal_characters();
 			}
-			constexpr static auto decimal_literal() {
+			static auto decimal_literal() {
 				return cppcp::map(
 					decimal_literal_characters(),
 					[](const auto& e) {
@@ -449,7 +449,7 @@ namespace tig::magimocha {
 				);
 			}
 
-			constexpr static auto hexadecimal_digit() {
+			static auto hexadecimal_digit() {
 				return cppcp::trys(
 					impl::unicodeBlock(anyc(), U'0', U'9'),
 					impl::unicodeBlock(anyc(), U'a', U'f'),
@@ -457,10 +457,10 @@ namespace tig::magimocha {
 				);
 			}
 
-			constexpr static auto hexadecimal_literal_character() {
+			static auto hexadecimal_literal_character() {
 				return cppcp::trys(hexadecimal_digit(), underbar());
 			}
-			constexpr static auto hexadecimal_literal_characters() {
+			static auto hexadecimal_literal_characters() {
 				return cppcp::manyN(
 					cppcp::sup<Itr>(string_type()),
 					hexadecimal_literal_character(),
@@ -474,7 +474,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto hexadecimal_literal_s() {
+			static auto hexadecimal_literal_s() {
 				return cppcp::map(
 					cppcp::join(
 						impl::unicodeChar(anyc(), U'0'),
@@ -486,7 +486,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto hexadecimal_literal() {
+			static auto hexadecimal_literal() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(impl::unicodeChar(anyc(), U'0')),
@@ -501,7 +501,7 @@ namespace tig::magimocha {
 				);
 			}
 
-			constexpr static auto integer_literal() {
+			static auto integer_literal() {
 				return cppcp::trys(
 					binary_literal(),
 					octal_literal(),
@@ -512,25 +512,25 @@ namespace tig::magimocha {
 			/*
 			* float literals
 			*/
-			constexpr static auto sign() {
+			static auto sign() {
 				return cppcp::trys(
 					plus(),
 					minus()
 				);
 			}
-			constexpr static auto floating_point_p() {
+			static auto floating_point_p() {
 				return cppcp::trys(
 					impl::unicodeChar(anyc(), U'p'),
 					impl::unicodeChar(anyc(), U'P')
 				);
 			}
-			constexpr static auto floating_point_e() {
+			static auto floating_point_e() {
 				return cppcp::trys(
 					impl::unicodeChar(anyc(), U'e'),
 					impl::unicodeChar(anyc(), U'E')
 				);
 			}
-			constexpr static auto hexadecimal_exponent() {
+			static auto hexadecimal_exponent() {
 				return cppcp::map(
 					cppcp::join(
 						floating_point_p(),
@@ -542,7 +542,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto hexadecimal_fraction() {
+			static auto hexadecimal_fraction() {
 				return cppcp::map(
 					cppcp::join(
 						dot(),
@@ -554,7 +554,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto decimal_exponent() {
+			static auto decimal_exponent() {
 				return cppcp::map(
 					cppcp::join(
 						floating_point_e(),
@@ -566,7 +566,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto decimal_fraction() {
+			static auto decimal_fraction() {
 				return  cppcp::map(
 					cppcp::join(
 						dot(),
@@ -577,7 +577,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto floating_point_literal() {
+			static auto floating_point_literal() {
 				return cppcp::map(cppcp::trys(
 					cppcp::join(cppcp::option(c2s(minus())), hexadecimal_literal_s(), hexadecimal_fraction(), hexadecimal_exponent()),
 					cppcp::join(cppcp::option(c2s(minus())), decimal_literal_s(), decimal_fraction(), cppcp::option_or(decimal_exponent(), U""))
@@ -590,7 +590,7 @@ namespace tig::magimocha {
 			/*
 			numeric literals
 			*/
-			constexpr static auto numeric_literal() {
+			static auto numeric_literal() {
 
 				return cppcp::trys(
 					cppcp::parser_cast<std::shared_ptr<ast::numeric_literal>>(floating_point_literal()),
@@ -607,7 +607,7 @@ namespace tig::magimocha {
 			* string literals
 			*/
 
-			constexpr static auto escaped_newline() {
+			static auto escaped_newline() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::many(
@@ -624,7 +624,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto unicode_scalar_digits() {
+			static auto unicode_scalar_digits() {
 				return cppcp::manyNM(
 					cppcp::sup<Itr, string_type>(string_type()),
 					hexadecimal_digit(),
@@ -636,7 +636,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto unicode_scalar() {
+			static auto unicode_scalar() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(impl::unicodeChar(anyc(), U'u')),
@@ -654,7 +654,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto escaped_character() {
+			static auto escaped_character() {
 				return cppcp::map(cppcp::join(
 					cppcp::skip(backslash()),
 					cppcp::trys(
@@ -697,7 +697,7 @@ namespace tig::magimocha {
 					return std::get<0>(e);
 				});
 			}
-			constexpr static auto multiline_quoted_text_item() {
+			static auto multiline_quoted_text_item() {
 				return cppcp::trys(
 					c2s(escaped_character()),
 					escaped_newline(),
@@ -712,7 +712,7 @@ namespace tig::magimocha {
 					)
 				);
 			}
-			constexpr static auto multiline_quoted_text() {
+			static auto multiline_quoted_text() {
 				return cppcp::many(
 					cppcp::sup<Itr, string_type>(string_type()),
 					multiline_quoted_text_item(),
@@ -722,7 +722,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto quoted_text_item() {
+			static auto quoted_text_item() {
 				return cppcp::trys(
 					escaped_character(),
 					cppcp::map(
@@ -736,7 +736,7 @@ namespace tig::magimocha {
 					)
 				);
 			}
-			constexpr static auto quoted_text() {
+			static auto quoted_text() {
 				return cppcp::many(
 					cppcp::sup<Itr, string_type>(string_type()),
 					quoted_text_item(),
@@ -746,7 +746,7 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			/*constexpr static auto  multiline_interpolated_text_item() {
+			/*static auto  multiline_interpolated_text_item() {
 				return cppcp::trys(
 					cppcp::join(
 						cppcp::skip(backslash()), cppcp::skip(parenthesis_open()), expression(), cppcp::skip(parenthesis_close())
@@ -754,7 +754,7 @@ namespace tig::magimocha {
 					multiline_quoted_text_item()
 				);
 			}
-			constexpr static auto  multiline_interpolated_text() {
+			static auto  multiline_interpolated_text() {
 				return cppcp::manyN(
 					multiline_interpolated_text_item(),
 					1,
@@ -765,7 +765,7 @@ namespace tig::magimocha {
 					}
 				);
 			}*/
-			constexpr static auto static_string_literal() {
+			static auto static_string_literal() {
 				return cppcp::map(
 					cppcp::trys(
 						cppcp::join(
@@ -786,12 +786,12 @@ namespace tig::magimocha {
 					[](const auto& e) {return std::get<0>(e); }
 				);
 			}
-			constexpr static auto string_literal() {
+			static auto string_literal() {
 				return cppcp::map(static_string_literal(), [](auto&& e) {
 					return std::make_shared<ast::string_literal>(e);
 				});
 			}
-			constexpr static auto literal_() {
+			static auto literal_() {
 				return cppcp::trys(
 					cppcp::parser_cast<std::shared_ptr<ast::literal_>>(numeric_literal()),
 					cppcp::parser_cast<std::shared_ptr<ast::literal_>>(string_literal())
@@ -967,7 +967,7 @@ namespace tig::magimocha {
 					op_head()
 				);
 			}
-			constexpr static auto op() {
+			static auto op() {
 				return cppcp::map(
 					cppcp::join(
 						op_head(),
@@ -995,7 +995,7 @@ namespace tig::magimocha {
 			 * declarations
 			*/
 
-			/*constexpr static auto declaration_name() {
+			/*static auto declaration_name() {
 				return  cppcp::map(
 					identifier(),
 					[](auto&& e) {
@@ -1004,7 +1004,7 @@ namespace tig::magimocha {
 				);
 			}*/
 
-			constexpr static auto declaration_parameter() {
+			static auto declaration_parameter() {
 				return cppcp::trys(
 					//cppcp::sup<Itr>(std::make_shared<ast::declaration_parameter>(string_type(U"xxx")))
 					cppcp::map(
@@ -1045,7 +1045,7 @@ namespace tig::magimocha {
 					)
 					);
 			}
-			constexpr static auto declaration_lambda_parameter_item() {
+			static auto declaration_lambda_parameter_item() {
 				return cppcp::map(cppcp::join(
 					skip_optinal_whitespace(),
 					declaration_parameter(),
@@ -1055,7 +1055,7 @@ namespace tig::magimocha {
 					return std::get<0>(e);
 				});
 			}
-			constexpr static auto declaration_lambda_parameter() {
+			static auto declaration_lambda_parameter() {
 				return cppcp::trys(
 					cppcp::map(
 						cppcp::join(
@@ -1120,7 +1120,7 @@ namespace tig::magimocha {
 			/*
 			useable_name
 			*/
-			constexpr static auto call_name() {
+			static auto call_name() {
 				return cppcp::map(
 					cppcp::trys(
 						identifier()
@@ -1130,10 +1130,10 @@ namespace tig::magimocha {
 				}
 				);
 			}
-			constexpr static auto operand() {
+			static auto operand() {
 				return expression();
 			}
-			constexpr static auto apply_function_args() {
+			static auto apply_function_args() {
 				return cppcp::get0(cppcp::join(
 					cppcp::skip(
 						parenthesis_open()
@@ -1164,7 +1164,7 @@ namespace tig::magimocha {
 
 
 
-			static constexpr auto expression_block() {
+			static auto expression_block() {
 				return cppcp::trys(
 					cppcp::get0(cppcp::join(cppcp::skip(parenthesis_open()), expression(), cppcp::skip(parenthesis_close()))),
 					cppcp::map(
@@ -1200,7 +1200,7 @@ namespace tig::magimocha {
 				);
 			}
 
-			static constexpr auto declaration_variable() {
+			static auto declaration_variable() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(impl::unicodeChar(anyc(), U'v')),
@@ -1229,7 +1229,7 @@ namespace tig::magimocha {
 
 
 
-			static constexpr auto named_function_expression_scope() {
+			static auto named_function_expression_scope() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(impl::unicodeChar(anyc(), U'd')),
@@ -1418,7 +1418,7 @@ namespace tig::magimocha {
 				);
 				return cppcp::lazy([=]() {return cache; });
 			}
-			static constexpr cppcp::type_eraser<Itr, std::shared_ptr<ast::expression>> expression() {
+			static cppcp::type_eraser<Itr, std::shared_ptr<ast::expression>> expression() {
 				return cppcp::lazy(
 					[]() {
 						return cppcp::trys(
@@ -1453,7 +1453,7 @@ namespace tig::magimocha {
 				);
 			}
 			
-			static constexpr auto named_function_module_scope() {
+			static auto named_function_module_scope() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(impl::unicodeChar(anyc(), U'd')),
@@ -1506,13 +1506,13 @@ namespace tig::magimocha {
 					}
 				);
 			}
-			static constexpr cppcp::type_eraser<Itr,std::shared_ptr<ast::module_member>> module_members_item() {
+			static  cppcp::type_eraser<Itr,std::shared_ptr<ast::module_member>> module_members_item() {
 				return cppcp::trys(
 					named_function_module_scope(),
 					declaration_infix()
 				);
 			}
-			static constexpr auto module_members() {
+			static  auto module_members() {
 				return cppcp::many(
 					cppcp::sup<Itr>(std::vector<std::shared_ptr<ast::module_member>>{}),
 					cppcp::join(skip_optinal_whitespace(),module_members_item()),
@@ -1522,7 +1522,7 @@ namespace tig::magimocha {
 					}
 				);
 			}
-			static constexpr auto module_p() {
+			static  auto module_p() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(impl::unicodeChar(anyc(), U'm')),
@@ -1545,7 +1545,7 @@ namespace tig::magimocha {
 					}
 				);
 			}
-			static constexpr auto declaration_infix() {
+			static  auto declaration_infix() {
 				return cppcp::map(
 					cppcp::join(
 						cppcp::skip(impl::unicodeChar(anyc(), U'i')),
@@ -1598,7 +1598,7 @@ namespace tig::magimocha {
 					}
 				);
 			}
-			/*static constexpr std::shared_ptr<typename ast::expression> processing_expression_tree(
+			/*static  std::shared_ptr<typename ast::expression> processing_expression_tree(
 				cppcp::node<
 					std::shared_ptr<typename ast::call_name>,
 					std::shared_ptr<typename ast::literal_>

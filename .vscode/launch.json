@@ -8,7 +8,7 @@
             "name": "Test",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "build\\cppcp-test\\cppcpTest.exe",
+            "program": "build\\magimocha-test\\magimocha-test.exe",
             "args": ["-DCMAKE_CXX_CPPCHECK:FILEPATH=cppcheck"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

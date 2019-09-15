@@ -208,10 +208,10 @@ TEST(MagiMocha, floating_literal) {
 numeric literal
 */
 
-template<class R,class T>
+/*template<class R,class T>
 auto dynamic(T&& t) {
 	return dynamic_impl<R,T>(std::move(t));
-}
+}*/
 TEST(MagiMocha, numeric_literal_unsigned) {
 	using namespace std::string_literals;
 	std::u32string s2 = U"0b110_10";

@@ -214,11 +214,11 @@ public:
 	{
 		return leaf_type::named_function;
 	}
-	auto body()
+	auto body()const
 	{
 		return body_;
 	}
-	auto &name()
+	const auto &name()const
 	{
 		return name_;
 	}

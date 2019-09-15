@@ -10,7 +10,7 @@ struct walk_visitor_impl
     {
     }
     template <class T>
-    R operator()(T e)
+    R operator()(std::shared_ptr<T> e)
     {
         if constexpr (std::is_base_of_v<ast::make_scope, T>)
         {
@@ -26,7 +26,7 @@ struct walk_visitor_impl
 template <class R, class Wal, class E>
 R walk(Wal &wal, E e)
 {
-    auto vis = walk_visitor_impl(wal);
+    auto vis = walk_visitor_impl<R,Wal>(wal);
     return ast::visit<R>(vis, e);
 }
 } // namespace tig::magimocha::ast
