@@ -110,6 +110,7 @@
     "gtest-adapter.supportLocation": true,
     "C_Cpp.clang_format_style": "file",
     "editor.formatOnSave": true,
-    "editor.formatOnType": true
+    "editor.formatOnType": true,
+    
     //"cmake.cmakePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
 }

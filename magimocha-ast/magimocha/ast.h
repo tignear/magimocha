@@ -166,7 +166,7 @@ public:
 	}
 };
 
-class declaration_function final : public expression, public module_member, public make_scope, public ast_leaf
+class declaration_function  : public expression, public module_member, public make_scope, public ast_leaf
 {
 	std::vector<std::shared_ptr<declaration_parameter>> params_;
 	std::shared_ptr<expression> body_;
@@ -200,7 +200,7 @@ public:
 		return type_data_;
 	}
 };
-class named_function final : public expression, public module_member, public ast_leaf
+class named_function final :public make_scope, public expression, public module_member ,public ast_leaf
 {
 	string_type name_;
 	std::shared_ptr<declaration_function> body_;
@@ -415,33 +415,33 @@ public:
 class op_token_double
 {
 
-	std::shared_ptr<typename call_name> s_;
+	std::shared_ptr<call_name> s_;
 
 public:
-	explicit op_token_double(std::shared_ptr<typename call_name> s) : s_(s)
+	explicit op_token_double(std::shared_ptr<call_name> s) : s_(s)
 	{
 	}
-	std::shared_ptr<typename call_name> name() const
+	std::shared_ptr<call_name> name() const
 	{
 		return s_;
 	}
 };
 class op_token_single
 {
-	std::shared_ptr<typename call_name> s_;
+	std::shared_ptr<call_name> s_;
 
 public:
-	explicit op_token_single(std::shared_ptr<typename call_name> s) : s_(s)
+	explicit op_token_single(std::shared_ptr<call_name> s) : s_(s)
 	{
 	}
-	std::shared_ptr<typename call_name> name() const
+	std::shared_ptr<call_name> name() const
 	{
 		return s_;
 	}
 };
 class op_token_function_applying
 {
-	std::vector<std::shared_ptr<typename expression>> args_;
+	std::vector<std::shared_ptr<expression>> args_;
 
 public:
 	explicit op_token_function_applying(std::vector<std::shared_ptr<expression>> args) : args_(args)
@@ -457,10 +457,10 @@ using operator_token_type = std::variant<
 	op_token_single,
 	op_token_double,
 	op_token_function_applying,
-	std::shared_ptr<typename declaration_function>,
-	std::shared_ptr<typename literal_>,
-	std::shared_ptr<typename expression>,
-	std::shared_ptr<typename call_name>>;
+	std::shared_ptr<declaration_function>,
+	std::shared_ptr<literal_>,
+	std::shared_ptr<expression>,
+	std::shared_ptr<call_name>>;
 class operation final : public expression, public ast_leaf
 {
 	std::list<operator_token_type> value_;
@@ -550,6 +550,10 @@ class declaration_export final : public module_member, public ast_leaf
 	const std::vector<string_type> &to() const
 	{
 		return to_;
+	}
+	leaf_type type() const override
+	{
+		return leaf_type::declaration_export;
 	}
 };
 enum class infix_type

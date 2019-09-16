@@ -19,7 +19,8 @@ struct walk_visitor_impl
             w.scope_out(e);
             return r;
         }
-        return w(e);
+            return w(e);
+
     }
 };
 

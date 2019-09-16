@@ -29,6 +29,7 @@ llvm_map_components_to_libnames(
 add_executable(
 	magimocha-llvm2
 	"magimocha/codegen/codegen.cpp" 
+	"main.cpp"
 )
 
 target_link_libraries(magimocha-llvm2 magimocha-ast magimocha-typer ${llvm_libs})

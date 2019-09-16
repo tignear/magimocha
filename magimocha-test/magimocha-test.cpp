@@ -1,3 +1,4 @@
+#include <cstddef>
 #include "gtest/gtest.h"
 #include "magimocha/parser.h"
 #include "testutil.h"

@@ -118,24 +118,25 @@ namespace tig::magimocha::ast {
 		}
 		throw std::invalid_argument("");
 	}
-	struct to_ast_leaf {
-		std::shared_ptr<ast_leaf> s;
-		to_ast_leaf(std::shared_ptr<ast::expression> s) {
+	template<class R>
+	struct to_ast_elem {
+		std::shared_ptr<R> s;
+		to_ast_elem(std::shared_ptr<ast::expression> s) {
 			ast::visit<std::monostate>(*this,s);
 		}
-		to_ast_leaf(std::shared_ptr<ast::module_member> s) {
+		to_ast_elem(std::shared_ptr<ast::module_member> s) {
 			ast::visit<std::monostate>(*this, s);
 		}
-		to_ast_leaf(std::shared_ptr<ast::literal_> s) {
+		to_ast_elem(std::shared_ptr<ast::literal_> s) {
 			ast::visit<std::monostate>(*this, std::static_pointer_cast<ast::expression>(s));
 		}
 		template<class T>
-		to_ast_leaf(std::shared_ptr<T> s) :s(s) {
+		to_ast_elem(std::shared_ptr<T> s) :s(s) {
 		}
-		std::shared_ptr<ast_leaf> operator()()const {
+		std::shared_ptr<R> operator()()const {
 			return s;
 		}
-		operator std::shared_ptr<ast_leaf>()const {
+		operator std::shared_ptr<R>()const {
 			return s;
 		}
 
@@ -145,5 +146,7 @@ namespace tig::magimocha::ast {
 			return std::monostate{};
 		}
 	};
+        using to_ast_leaf = to_ast_elem<ast::ast_leaf>;
+		using to_typed_data=to_ast_elem<ast::typed_data>;
 }
 

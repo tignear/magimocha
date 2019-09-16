@@ -1,6 +1,8 @@
+#pragma once
 #include "llvm/IR/Value.h"
 #include "magimocha/typing.h"
 namespace tig::magimocha::codegen2 {
+
 	struct llvm_values
 	{
 		virtual void set(std::shared_ptr<ast::typed_data>, llvm::Value*)=0;
@@ -22,9 +24,17 @@ namespace tig::magimocha::codegen2 {
 	struct context {
 		std::shared_ptr<ast::make_scope> scope;
 		std::shared_ptr<typing::variable_table> vars;
-		std::shared_ptr<typing::type_table> types;
-		std::shared_ptr<typing::type_schema_table> schemas;
-		std::shared_ptr<typing::typed_data_2_variable_table_table> typed_data_2_variable_table_table;
-		std::shared_ptr<llvm_values> values;
-	};
+        std::string name;
+        unsigned int count_of_anonymous_function = 0;
+        unsigned int count_of_expression_block = 0;
+    };
+
+    llvm::Value *
+    codegen(std::shared_ptr<ast::declaration_module> mod,
+            std::shared_ptr<typing::type_table> types,
+            std::shared_ptr<typing::type_schema_table> schemas,
+            std::shared_ptr<typing::make_scope_2_variable_table_table>
+                make_scope_2_variable_table_table,
+            std::shared_ptr<llvm_values> values, llvm::LLVMContext &the_context,
+            llvm::Module *the_module);
 }

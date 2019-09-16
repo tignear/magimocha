@@ -58,6 +58,7 @@ namespace tig::magimocha::typing {
 			
 		}
 	};
+
 	struct type_schema {
 		std::unordered_set<std::shared_ptr<ast::var_type_data>> type_vars;
 		std::shared_ptr<ast::type_data> type_data;
@@ -80,17 +81,17 @@ namespace tig::magimocha::typing {
 			map.insert_or_assign(k,v);
 		}
 	};
-	struct typed_data_2_variable_table_table
+	struct make_scope_2_variable_table_table
 	{
-		virtual void set(std::shared_ptr<ast::typed_data> k, std::shared_ptr<variable_table> v)=0;
-		virtual  std::shared_ptr<variable_table> get(std::shared_ptr<ast::typed_data> k) = 0;
+		virtual void set(std::shared_ptr<ast::make_scope> k, std::shared_ptr<variable_table> v)=0;
+		virtual  std::shared_ptr<variable_table> get(std::shared_ptr<ast::make_scope> k) = 0;
 	};
-	struct typed_data_2_variable_table_table_impl:typed_data_2_variable_table_table {
-		std::unordered_map<std::shared_ptr<ast::typed_data>, std::shared_ptr<variable_table>> map;
-		void set(std::shared_ptr<ast::typed_data> k, std::shared_ptr<variable_table> v)override {
+	struct make_scope_2_variable_table_table_impl:make_scope_2_variable_table_table {
+		std::unordered_map<std::shared_ptr<ast::make_scope>, std::shared_ptr<variable_table>> map;
+		void set(std::shared_ptr<ast::make_scope> k, std::shared_ptr<variable_table> v)override {
 			map.insert_or_assign(k,v);
 		}
-		std::shared_ptr<variable_table> get(std::shared_ptr<ast::typed_data> k)override {
+		std::shared_ptr<variable_table> get(std::shared_ptr<ast::make_scope> k)override {
 			auto itr=map.find(k);
 			if (itr == cend(map)) {
 				return std::shared_ptr<variable_table>();
@@ -103,7 +104,7 @@ namespace tig::magimocha::typing {
 		std::shared_ptr<variable_table> vars;
 		std::shared_ptr<type_table> types;
 		std::shared_ptr<type_schema_table> schemas;
-		std::shared_ptr<typed_data_2_variable_table_table> typed_data_2_variable_table_table;
+		std::shared_ptr<make_scope_2_variable_table_table> typed_data_2_variable_table_table;
 	};
 	std::shared_ptr<ast::type_data> replace_types(
 		std::shared_ptr<type_table> types,
@@ -133,7 +134,7 @@ namespace tig::magimocha::typing {
 		resolve_type(types, t, free_vars);
 		return type_schema{ free_vars,t };
 	}
-	std::shared_ptr<ast::type_data> infer(std::shared_ptr<type_table> table,std::shared_ptr<ast::typed_data> expr);
+	//std::shared_ptr<ast::type_data> infer(std::shared_ptr<type_table> table,std::shared_ptr<ast::typed_data> expr);
 	void unify(std::shared_ptr<type_table> table, std::shared_ptr<ast::type_data> t1, std::shared_ptr<ast::type_data> t2);
 
 	std::shared_ptr<ast::type_data> infer(

@@ -3,7 +3,17 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}\\**"
+                "${workspaceFolder}/**",
+                "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.21.27702/ATLMFC/include",
+                "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.21.27702/include",
+                "C:/Program Files (x86)/Windows Kits/NETFXSDK/4.6.1/include/um",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.17763.0/ucrt",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.17763.0/shared",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.17763.0/um",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.17763.0/winrt",
+                "C:/Program Files (x86)/Windows Kits/10/include/10.0.17763.0/cppwinrt",
+                "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.21.27702/include",
+                "C:/Users/tignear/CMakeBuilds/9a4487f8-4285-ec3c-ab94-794337022481/install/x64-Release/include/llvm"
             ],
             "defines": [
                 "_DEBUG",

@@ -156,7 +156,7 @@ namespace tig::magimocha::typing {
 					ref->set(dp);
 				}
 
-				unify(con.types, infer(context{ new_vars ,con.types,con.schemas}, df->body()), df->return_type_func()->result_type);
+				unify(con.types, infer(context{ new_vars ,con.types,con.schemas,con.typed_data_2_variable_table_table}, df->body()), df->return_type_func()->result_type);
 
 				auto schema = create_type_schema(con.types, df->return_type());
 				con.schemas->set(df, schema);
