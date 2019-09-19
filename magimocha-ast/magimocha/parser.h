@@ -967,14 +967,14 @@ namespace tig::magimocha {
 					op_head()
 				);
 			}
-			static auto op() {
-				return cppcp::map(
+			static auto op_s(){
+                return cppcp::map(
 					cppcp::join(
 						op_head(),
 						cppcp::many(
-							cppcp::sup<Itr, string_type>(string_type({ 0 })),
+							cppcp::sup<Itr, string_type>(string_type({0})),
 							op_character(),
-							[](auto&& a, const auto& e) {
+							[](auto &&a, const auto &e) {
 								a += e;
 								return cppcp::accm::contd(a);
 							}
@@ -983,8 +983,16 @@ namespace tig::magimocha {
 					[](auto&& e) {
 					auto r = std::get<1>(e);
 					r[0] = std::get<0>(e);
-					return std::make_shared<ast::call_name>(r);
-				}
+					return r;
+					}
+				);
+            }
+			static auto op() {
+				return cppcp::map(
+					op_s(),
+					[](auto&& e){
+						return std::make_shared<ast::call_name>(e);
+					}
 				);
 			}
 
@@ -1221,7 +1229,7 @@ namespace tig::magimocha {
 						}
 						else {
 							auto&& body = std::get<2>(e);
-							return std::make_shared<ast::declaration_variable>(std::get<0>(e),std::shared_ptr<ast::type_data>() ,body);
+							return std::make_shared<ast::declaration_variable>(std::get<0>(e),std::make_shared<ast::var_type_data>() ,body);
 						}
 					}
 				);
@@ -1554,7 +1562,7 @@ namespace tig::magimocha {
 						cppcp::skip(impl::unicodeChar(anyc(), U'i')),
 						cppcp::skip(impl::unicodeChar(anyc(), U'x')),
 						cppcp::skip(whitespace()),
-						identifier(),
+						cppcp::trys(identifier(),op_s()),
 						cppcp::skip(whitespace()),
 						cppcp::map(
 							cppcp::trys(

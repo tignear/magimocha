@@ -69,6 +69,12 @@ std::shared_ptr<ast::ast_leaf> operation_to_function_applying_all_leaf(
     std::shared_ptr<operator_info_table> current,
     std::unordered_map<std::shared_ptr<ast::make_scope>,
                        std::shared_ptr<operator_info_table>> &map);
+std::shared_ptr<ast::module_member>
+operation_to_function_applying_all_modlue_member(
+    std::shared_ptr<ast::module_member> target,
+    std::shared_ptr<operator_info_table> current,
+    std::unordered_map<std::shared_ptr<ast::make_scope>,
+                       std::shared_ptr<operator_info_table>> &map);
 std::shared_ptr<ast::expression> operation_to_function_applying_all(
     std::shared_ptr<ast::expression> target,
     std::shared_ptr<operator_info_table> current,

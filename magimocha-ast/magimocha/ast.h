@@ -166,7 +166,7 @@ public:
 	}
 };
 
-class declaration_function  : public expression, public module_member, public make_scope, public ast_leaf
+class declaration_function  : public expression,  public make_scope, public ast_leaf
 {
 	std::vector<std::shared_ptr<declaration_parameter>> params_;
 	std::shared_ptr<expression> body_;
@@ -506,7 +506,7 @@ public:
 		return name_;
 	}
 };
-class declaration_variable final : public expression, public module_member, public ast_leaf, public make_scope
+class declaration_variable final : public expression, public module_member, public ast_leaf
 {
 	string_type name_;
 	std::shared_ptr<type_data> type_data_;
@@ -516,7 +516,7 @@ public:
 	declaration_variable(
 		const string_type &name,
 		std::shared_ptr<type_data> type_data,
-		std::shared_ptr<expression> body) : name_(name), body_(body)
+		std::shared_ptr<expression> body) : name_(name),type_data_(type_data), body_(body)
 	{
 	}
 	std::shared_ptr<type_data> return_type() const override

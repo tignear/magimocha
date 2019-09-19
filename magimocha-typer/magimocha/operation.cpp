@@ -67,6 +67,7 @@ struct operation_to_function_applying_process_op_token_single_visitor {
     }
     void operator()(ast::op_token_double x) {
         if(!buf) {
+            list_ref.push_back(x);
             return;
         };
         list_ref.push_back(std::make_shared<ast::apply_function>(
@@ -218,7 +219,7 @@ struct operation_to_function_applying_visitor {
     auto operator()(std::shared_ptr<ast::declaration_function> x) {
         return std::make_shared<ast::declaration_function>(
             x->params(), x->return_type_func(),
-            operation_to_function_applying_all(x->body(), current, op_infos));
+            operation_to_function_applying_all(x->body(), op_infos.at(x), op_infos));
     }
     auto operator()(std::shared_ptr<ast::signed_number_literal> x) {
         // do nothing
@@ -255,7 +256,7 @@ struct operation_to_function_applying_visitor {
         std::vector<std::shared_ptr<ast::expression>> exprs;
         for(auto &&expr : x->value()) {
             exprs.push_back(
-                operation_to_function_applying_all(expr, current, op_infos));
+                operation_to_function_applying_all(expr, op_infos.at(x), op_infos));
         }
         return std::make_shared<ast::expression_block>(std::move(exprs));
     }
@@ -276,9 +277,13 @@ struct operation_to_function_applying_visitor {
     auto operator()(std::shared_ptr<ast::declaration_infix> x) { return x; }
     auto operator()(std::shared_ptr<ast::declaration_parameter> x) { return x; }
 
-    std::shared_ptr<ast::declaration_module>
-    operator()(std::shared_ptr<ast::declaration_module> x) {
-        throw "NIMPL";
+    auto operator()(std::shared_ptr<ast::declaration_module> x) {
+        std::vector<std::shared_ptr<ast::module_member>> nmem;
+        for(auto m : x->members()) {
+            nmem.push_back(operation_to_function_applying_all_modlue_member(
+                m, op_infos.at(x), op_infos));
+        }
+        return std::make_shared<ast::declaration_module>(x->name(), nmem);
     }
     auto operator()(std::shared_ptr<ast::declaration_export> x) { return x; }
 };
@@ -290,9 +295,8 @@ struct operation_to_function_applying_laef_visitor
                            std::shared_ptr<operator_info_table>> &op_infos)
         : operation_to_function_applying_visitor{current, op_infos} {}
     auto operator()(std::shared_ptr<ast::operation> x) {
-        auto &&m = operation_to_function_applying(x, current, op_infos);
         return ast::to_ast_leaf(
-            operation_to_function_applying_all(m, current, op_infos));
+            operation_to_function_applying_visitor::operator()(x));
     }
     template <class T> auto operator()(std::shared_ptr<T> x) {
         return operation_to_function_applying_visitor::operator()(x);
@@ -306,6 +310,15 @@ std::shared_ptr<ast::ast_leaf> operation_to_function_applying_all_leaf(
                        std::shared_ptr<operator_info_table>> &map) {
     auto vis = operation_to_function_applying_laef_visitor{current, map};
     return ast::visit<std::shared_ptr<ast::ast_leaf>>(vis, target);
+}
+std::shared_ptr<ast::module_member>
+operation_to_function_applying_all_modlue_member(
+    std::shared_ptr<ast::module_member> target,
+    std::shared_ptr<operator_info_table> current,
+    std::unordered_map<std::shared_ptr<ast::make_scope>,
+                       std::shared_ptr<operator_info_table>> &map) {
+    auto vis = operation_to_function_applying_visitor{current, map};
+    return ast::visit<std::shared_ptr<ast::module_member>>(vis, target);
 }
 std::shared_ptr<ast::expression> operation_to_function_applying_all(
     std::shared_ptr<ast::expression> target,
@@ -439,7 +452,7 @@ void extract_operator_info(
             return r;
         }
         auto operator()(std::shared_ptr<ast::declaration_infix> x) {
-            auto &&ref = p->find_shallow(U"Id");
+            auto &&ref = p->find_shallow(x->name());
 
             ref->set(operator_info{x->priority(), x->infix_type()});
             return r;

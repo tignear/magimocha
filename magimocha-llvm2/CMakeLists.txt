@@ -33,5 +33,5 @@ add_executable(
 )
 
 target_link_libraries(magimocha-llvm2 magimocha-ast magimocha-typer ${llvm_libs})
-set (CMAKE_EXE_LINKER_FLAGS "/STACK:10000000" )
+set (CMAKE_EXE_LINKER_FLAGS "/STACK:40000000" )
 add_compile_options(/wd4267)

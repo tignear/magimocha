@@ -6,10 +6,8 @@
 #include "gtest/gtest.h"
 using u32src = src<std::u32string::const_iterator>;
 using x = tig::magimocha::parser::p<u32src>;
-namespace ast = tig::magimocha::ast;
 namespace cg2 = tig::magimocha::codegen2;
-
-namespace typing = tig::magimocha::typing;
+using namespace tig::magimocha;
 TEST(MagiMochaTyping, named_function_expression_scope_id_int) {
     using namespace std::string_literals;
 
@@ -25,13 +23,15 @@ TEST(MagiMochaTyping, named_function_expression_scope_id_int) {
         std::unordered_map<std::shared_ptr<ast::make_scope>,
                            std::shared_ptr<cg2::operator_info_table>>();
     info_table_map.insert(std::make_pair(pr, info_table));
+    cg2::extract_operator_info(pr, info_table, info_table_map);
+
 
     auto r =
         cg2::operation_to_function_applying_all(pr, info_table, info_table_map);
     auto type_table = std::make_shared<typing::type_table_impl>();
     auto context = typing::context{
-        typing::create_variable_table(
-            std::shared_ptr<typing::variable_table>()),
+        name::create_variable_table(
+            std::shared_ptr<name::variable_table>()),
         type_table, std::make_shared<typing::type_schema_table_impl>(),
         std::make_shared<typing::make_scope_2_variable_table_table_impl>()};
     typing::infer(context, r);
@@ -72,13 +72,15 @@ TEST(MagiMochaTyping, named_function_expression_scope_id) {
         std::unordered_map<std::shared_ptr<ast::make_scope>,
                            std::shared_ptr<cg2::operator_info_table>>();
     info_table_map.insert(std::make_pair(pr, info_table));
+    cg2::extract_operator_info(pr, info_table, info_table_map);
+
     auto r =
         cg2::operation_to_function_applying_all(pr, info_table, info_table_map);
     auto type_table = std::make_shared<typing::type_table_impl>();
     auto schema_table = std::make_shared<typing::type_schema_table_impl>();
     auto context = typing::context{
-        typing::create_variable_table(
-            std::shared_ptr<typing::variable_table>()),
+        name::create_variable_table(
+            std::shared_ptr<name::variable_table>()),
         type_table, schema_table,
         std::make_shared<typing::make_scope_2_variable_table_table_impl>()};
     typing::infer(context, r);
@@ -92,6 +94,7 @@ TEST(MagiMochaTyping, expressions) {
     std::u32string s = U"{def Id(x) = x\nval x=32;x}";
     auto p = x::named_function_expression_scope();
 }
+
 TEST(MagiMochaTyping, named_function_expression_scope_id_and_apply) {
     std::u32string s = U"{def Id(x) = x;Id(32);Id(3.6)}";
     auto p = x::expression_block();
@@ -106,13 +109,14 @@ TEST(MagiMochaTyping, named_function_expression_scope_id_and_apply) {
     EXPECT_EQ(prraw->type(), ast::leaf_type::expression_block);
     auto pr = std::static_pointer_cast<ast::expression_block>(prraw);
     info_table_map.insert(std::make_pair(pr, info_table));
+        cg2::extract_operator_info(pr, info_table, info_table_map);
     auto r =
         cg2::operation_to_function_applying_all(pr, info_table, info_table_map);
     auto type_table = std::make_shared<typing::type_table_impl>();
     auto schema_table = std::make_shared<typing::type_schema_table_impl>();
     auto context = typing::context{
-        typing::create_variable_table(
-            std::shared_ptr<typing::variable_table>()),
+        name::create_variable_table(
+            std::shared_ptr<name::variable_table>()),
         type_table, schema_table,
         std::make_shared<typing::make_scope_2_variable_table_table_impl>()};
     typing::infer(context, r);
@@ -169,7 +173,7 @@ TEST(MagiMochaTyping, expression_block_convert_scope) {
     auto rv1raw = rv.at(1);
     EXPECT_EQ(rv1raw->type(), ast::leaf_type::expression_block);
 }
-TEST(MagiMochaTyping, extract_infix_basic) {
+TEST(MagiMochaTyping, extract_infix_in_expression_block) {
     auto p = x::expression_block();
     std::u32string s = U"{infix Id left 145}";
     auto info_table = std::make_shared<cg2::operator_info_table_impl>(
@@ -186,5 +190,25 @@ TEST(MagiMochaTyping, extract_infix_basic) {
     EXPECT_TRUE(ref);
     auto info = ref->get();
     EXPECT_EQ(info.priority, 145);
+    EXPECT_EQ(info.infix, ast::infix_type::left);
+}
+
+TEST(MagiMochaTyping, extract_infix_in_module) {
+    auto p = x::module_p();
+    std::u32string s = U"module a{infix + left 125}";
+    auto info_table = std::make_shared<cg2::operator_info_table_impl>(
+        std::shared_ptr<cg2::operator_info_table>());
+    auto prraw = p(src{cbegin(s), cend(s)}).get();
+    EXPECT_EQ(prraw->type(), ast::leaf_type::declaration_module);
+    auto pr = std::static_pointer_cast<ast::declaration_module>(prraw);
+    std::unordered_map<std::shared_ptr<ast::make_scope>,
+                       std::shared_ptr<cg2::operator_info_table>>
+        map;
+
+    cg2::extract_operator_info(pr, info_table, map);
+    auto ref = map.at(pr)->find_shallow(U"+");
+    EXPECT_TRUE(ref);
+    auto info = ref->get();
+    EXPECT_EQ(info.priority, 125);
     EXPECT_EQ(info.infix, ast::infix_type::left);
 }

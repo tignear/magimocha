@@ -14,6 +14,17 @@
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false
+        },
+        {
+            "name": "magimocha-llvm2",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "build\\magimocha-llvm2\\magimocha-llvm2.exe",
+            "args": ["-DCMAKE_CXX_CPPCHECK:FILEPATH=cppcheck"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false
         }
     ]
 }
