@@ -15,7 +15,7 @@ struct codegen_visitor {
     std::deque<context> context;
     std::shared_ptr<typing::type_table> types;
     std::shared_ptr<typing::type_schema_table> schemas;
-    std::shared_ptr<typing::make_scope_2_variable_table_table>
+    const std::unordered_map<std::shared_ptr<ast::make_scope>,std::shared_ptr<name::variable_table>>&
         make_scope_2_variable_table_table;
     std::shared_ptr<llvm_values> values;
 
@@ -24,7 +24,7 @@ struct codegen_visitor {
     llvm::Module *the_module;
     codegen_visitor(std::shared_ptr<typing::type_table> types,
                     std::shared_ptr<typing::type_schema_table> schemas,
-                    std::shared_ptr<typing::make_scope_2_variable_table_table>
+                    const std::unordered_map<std::shared_ptr<ast::make_scope>,std::shared_ptr<name::variable_table>>&
                         make_scope_2_variable_table_table,
                     std::shared_ptr<llvm_values> values,
                     llvm::LLVMContext &the_context, llvm::Module *the_module)
@@ -39,7 +39,7 @@ struct codegen_visitor {
     std::string get_name(const std::u32string &s) { return to_string(s); }
 
     void scope_in_base(std::shared_ptr<ast::make_scope> s, std::string name) {
-        auto vars = make_scope_2_variable_table_table->get(s);
+        auto vars = make_scope_2_variable_table_table.at(s);
         context.push_back(codegen2::context{
             s, vars ? vars : name::create_variable_table(context.back().vars), name});
     }
@@ -118,7 +118,7 @@ struct codegen_visitor {
     R operator()(std::shared_ptr<ast::declaration_variable> dv) {
         auto r = ast::walk<R>(*this, (dv->body()));
         r->setName(to_string(dv->name()));
-        context.back().vars->find_shallow(dv->name())->set(dv);
+        //context.back().vars->find_shallow(dv->name())->set(dv);
         values->set(dv, r);
         return r;
     }
@@ -170,7 +170,7 @@ struct codegen_visitor {
         auto ty = get_llvm_type(nf->return_type_func());
         auto f = llvm::Function::Create(ty, llvm::Function::ExternalLinkage,
                                         get_name(), the_module);
-        context.back().vars->find_shallow(nf->name())->set(nf);
+        //context.back().vars->find_shallow(nf->name())->set(nf);
         process_declaration_function(f, nf->body());
         values->set(nf,f);
         return f;
@@ -184,7 +184,7 @@ struct codegen_visitor {
             auto param = params.at(i);
             values->set(param, ai);
             if(auto name = param->name()) {
-                context.back().vars->find_shallow(*name)->set(param);
+                //context.back().vars->find_shallow(*name)->set(param);
                 ai->setName(get_name(*name));
             }
         }
@@ -212,7 +212,7 @@ namespace tig::magimocha::codegen2 {
 void codegen(std::shared_ptr<ast::declaration_module> mod,
              std::shared_ptr<typing::type_table> types,
              std::shared_ptr<typing::type_schema_table> schemas,
-             std::shared_ptr<typing::make_scope_2_variable_table_table>
+             const std::unordered_map<std::shared_ptr<ast::make_scope>,std::shared_ptr<name::variable_table>>&
                  make_scope_2_variable_table_table,
              std::shared_ptr<llvm_values> values,
              llvm::LLVMContext &the_context, llvm::Module *the_module) {

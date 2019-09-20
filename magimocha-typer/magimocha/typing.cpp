@@ -140,8 +140,8 @@ std::shared_ptr<ast::type_data> infer(context con,
             return create_type_schema_from(con.types, schema).type_data;
         }
         R operator()(std::shared_ptr<ast::declaration_function> df) {
-            auto new_vars = name::create_variable_table(con.vars);
-            con.make_scope_2_variable_table_table->set(df, new_vars);
+            //auto new_vars = name::create_variable_table(con.vars);
+            // con.make_scope_2_variable_table_table->set(df, new_vars);
             auto &params = df->params();
             // std::vecttor<declaration_parameter> newparams;
             for(auto &&dp : params) {
@@ -152,15 +152,15 @@ std::shared_ptr<ast::type_data> infer(context con,
                 if(!name) {
                     continue;
                 }
-                auto ref = new_vars->find_shallow(name.value());
+                /*auto ref = new_vars->find_shallow(name.value());
                 if(*ref) {
                     throw "error:defined name";
                 }
-                ref->set(dp);
+                ref->set(dp);*/
             }
 
             unify(con.types,
-                  infer(context{new_vars, con.types, con.schemas,
+                  infer(context{con.make_scope_2_variable_table_table.at(df), con.types, con.schemas,
                                 con.make_scope_2_variable_table_table},
                         df->body()),
                   df->return_type_func()->result_type);
@@ -196,20 +196,26 @@ std::shared_ptr<ast::type_data> infer(context con,
         R operator()(std::shared_ptr<ast::expression_block> exprs) {
             auto &&list = exprs->value();
             std::shared_ptr<ast::type_data> r;
+            auto ncon = context{con.make_scope_2_variable_table_table.at(exprs),
+                                con.types, con.schemas,
+                                con.make_scope_2_variable_table_table};
             for(auto &&e : list) {
-                r = infer(con, e);
+                r = infer(ncon, e);
             }
             unify(con.types, exprs->return_type(), r);
             return exprs->return_type();
         }
         R operator()(std::shared_ptr<ast::named_function> nf) {
-            auto &&name = nf->name();
+            /*auto &&name = nf->name();
             auto ref = con.vars->find_shallow(name);
             if(*ref) {
                 throw "error:defined name";
             }
-            ref->set(nf);
-            unify(con.types, nf->return_type(), infer(con, nf->body()));
+            ref->set(nf);*/
+            auto ncon= context{con.make_scope_2_variable_table_table.at(nf),
+                                con.types, con.schemas,
+                                con.make_scope_2_variable_table_table};
+            unify(con.types, nf->return_type(), infer(ncon, nf->body()));
             auto schema = create_type_schema(con.types, nf->return_type());
             con.schemas->set(nf, schema);
 
@@ -272,7 +278,7 @@ void infer_all(context con, std::shared_ptr<ast::module_member> mm) {
         }
         R operator()(std::shared_ptr<ast::declaration_module> dm) {
             auto nvar = name::create_variable_table(con.vars);
-            con.make_scope_2_variable_table_table->set(dm, nvar);
+            // con.make_scope_2_variable_table_table->set(dm, nvar);
             auto ncon = context{con};
             ncon.vars = nvar;
             for(auto m : dm->members()) {

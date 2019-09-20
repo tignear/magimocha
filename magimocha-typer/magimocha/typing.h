@@ -67,7 +67,7 @@ struct type_schema_table_impl : type_schema_table {
         map.insert_or_assign(k, v);
     }
 };
-struct make_scope_2_variable_table_table {
+/*struct make_scope_2_variable_table_table {
     virtual void set(std::shared_ptr<ast::make_scope> k,
                      std::shared_ptr<name::variable_table> v) = 0;
     virtual std::shared_ptr<name::variable_table>
@@ -90,13 +90,14 @@ struct make_scope_2_variable_table_table_impl
         }
         return itr->second;
     }
-};
+};*/
 struct context {
     std::shared_ptr<name::variable_table> vars;
     std::shared_ptr<type_table> types;
     std::shared_ptr<type_schema_table> schemas;
-    std::shared_ptr<make_scope_2_variable_table_table>
-        make_scope_2_variable_table_table;
+    const std::unordered_map<std::shared_ptr<ast::make_scope>,
+                             std::shared_ptr<name::variable_table>>
+        &make_scope_2_variable_table_table;
 };
 std::shared_ptr<ast::type_data>
 replace_types(std::shared_ptr<type_table> types,

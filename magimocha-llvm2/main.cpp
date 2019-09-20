@@ -53,15 +53,15 @@ int main() {
 			infix * right 500\n\
             def +(_:Double,_:Double):Double=0.0\n\
             def *(_:Double,_:Double):Double=0.0\n\
-			def main():Double={\
-				//2.0*3.0\n\
-				add(2.0,4.0)\n\
-			}\
             def add( a:Double , b:Double ):Double = {\n\
 				val x = a*2.0\n\
                 val y = x*4.0\n\
 				x+y\n\
 			}\n\
+			def main():Double={\
+				//2.0*3.0\n\
+				add(2.0,4.0)\n\
+			}\
 			//def add2(a,b):Double=(def sub(x,y):Double=x-y)(a,b)+add(a,b)\n\
 		}";
     auto ast =
@@ -75,6 +75,7 @@ int main() {
                        std::shared_ptr<cg2::operator_info_table>>
         map;
     cg2::extract_operator_info(ast::to_ast_leaf(ast2), info_table, map);
+    
     auto rraw = cg2::operation_to_function_applying_all_leaf(
         ast::to_ast_leaf(ast2), info_table, map);
     auto r = std::static_pointer_cast<ast::declaration_module>(rraw);
@@ -82,8 +83,12 @@ int main() {
         name::create_variable_table(std::shared_ptr<name::variable_table>());
     auto types = std::make_shared<typing::type_table_impl>();
     auto schemas = std::make_shared<typing::type_schema_table_impl>();
-    auto ms2vt =
-        std::make_shared<typing::make_scope_2_variable_table_table_impl>();
+    auto ms2vt = std::unordered_map<std::shared_ptr<ast::make_scope>,
+                                          std::shared_ptr<name::variable_table>>();
+    auto dm2mt = std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                                          std::shared_ptr<name::module_table>>();
+    auto mroot = name::create_module_table(std::shared_ptr<name::module_table>());
+    name::register_name(r,mroot,root,dm2mt,ms2vt);
     typing::infer_all(typing::context{root, types, schemas, ms2vt}, r);
     auto llvmv = std::make_shared<cg2::llvm_values_impl>();
     llvm::LLVMContext con;

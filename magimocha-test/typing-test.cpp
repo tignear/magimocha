@@ -1,6 +1,7 @@
 #include "magimocha/convert-ast.h"
 #include "magimocha/operation.h"
 #include "magimocha/parser.h"
+#include "magimocha/register-name.h"
 #include "magimocha/typing.h"
 #include "testutil.h"
 #include "gtest/gtest.h"
@@ -8,6 +9,7 @@ using u32src = src<std::u32string::const_iterator>;
 using x = tig::magimocha::parser::p<u32src>;
 namespace cg2 = tig::magimocha::codegen2;
 using namespace tig::magimocha;
+
 TEST(MagiMochaTyping, named_function_expression_scope_id_int) {
     using namespace std::string_literals;
 
@@ -25,15 +27,18 @@ TEST(MagiMochaTyping, named_function_expression_scope_id_int) {
     info_table_map.insert(std::make_pair(pr, info_table));
     cg2::extract_operator_info(pr, info_table, info_table_map);
 
-
     auto r =
         cg2::operation_to_function_applying_all(pr, info_table, info_table_map);
     auto type_table = std::make_shared<typing::type_table_impl>();
+    auto ms2vt = std::unordered_map<std::shared_ptr<ast::make_scope>,
+                                    std::shared_ptr<name::variable_table>>();
+    auto vt =
+        name::create_variable_table(std::shared_ptr<name::variable_table>());
+    ms2vt[std::static_pointer_cast<ast::named_function>(r)] = vt;
+    name::register_name(r,vt,ms2vt);
     auto context = typing::context{
-        name::create_variable_table(
-            std::shared_ptr<name::variable_table>()),
-        type_table, std::make_shared<typing::type_schema_table_impl>(),
-        std::make_shared<typing::make_scope_2_variable_table_table_impl>()};
+        vt, type_table, std::make_shared<typing::type_schema_table_impl>(),
+        ms2vt};
     typing::infer(context, r);
     EXPECT_EQ(r->type(), ast::leaf_type::named_function);
     auto rr = std::static_pointer_cast<ast::named_function>(r);
@@ -78,11 +83,14 @@ TEST(MagiMochaTyping, named_function_expression_scope_id) {
         cg2::operation_to_function_applying_all(pr, info_table, info_table_map);
     auto type_table = std::make_shared<typing::type_table_impl>();
     auto schema_table = std::make_shared<typing::type_schema_table_impl>();
-    auto context = typing::context{
-        name::create_variable_table(
-            std::shared_ptr<name::variable_table>()),
-        type_table, schema_table,
-        std::make_shared<typing::make_scope_2_variable_table_table_impl>()};
+    auto ms2vt = std::unordered_map<std::shared_ptr<ast::make_scope>,
+                                    std::shared_ptr<name::variable_table>>();
+    auto vt =
+        name::create_variable_table(std::shared_ptr<name::variable_table>());
+    ms2vt[std::static_pointer_cast<ast::named_function>(r)] = vt;
+    name::register_name(r, vt, ms2vt);
+
+    auto context = typing::context{vt, type_table, schema_table, ms2vt};
     typing::infer(context, r);
     EXPECT_EQ(r->type(), ast::leaf_type::named_function);
     auto rr = std::static_pointer_cast<ast::named_function>(r);
@@ -109,16 +117,19 @@ TEST(MagiMochaTyping, named_function_expression_scope_id_and_apply) {
     EXPECT_EQ(prraw->type(), ast::leaf_type::expression_block);
     auto pr = std::static_pointer_cast<ast::expression_block>(prraw);
     info_table_map.insert(std::make_pair(pr, info_table));
-        cg2::extract_operator_info(pr, info_table, info_table_map);
+    cg2::extract_operator_info(pr, info_table, info_table_map);
     auto r =
         cg2::operation_to_function_applying_all(pr, info_table, info_table_map);
     auto type_table = std::make_shared<typing::type_table_impl>();
     auto schema_table = std::make_shared<typing::type_schema_table_impl>();
-    auto context = typing::context{
-        name::create_variable_table(
-            std::shared_ptr<name::variable_table>()),
-        type_table, schema_table,
-        std::make_shared<typing::make_scope_2_variable_table_table_impl>()};
+    auto vt =
+        name::create_variable_table(std::shared_ptr<name::variable_table>());
+    auto ms2vt = std::unordered_map<std::shared_ptr<ast::make_scope>,
+                                    std::shared_ptr<name::variable_table>>();
+    ms2vt[std::static_pointer_cast<ast::expression_block>(r)] = vt;
+    name::register_name(r, vt, ms2vt);
+
+    auto context = typing::context{vt, type_table, schema_table, ms2vt};
     typing::infer(context, r);
 
     EXPECT_EQ(r->type(), ast::leaf_type::expression_block);

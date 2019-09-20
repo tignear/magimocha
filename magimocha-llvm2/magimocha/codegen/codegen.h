@@ -31,8 +31,9 @@ struct context {
 void codegen(std::shared_ptr<ast::declaration_module> mod,
              std::shared_ptr<typing::type_table> types,
              std::shared_ptr<typing::type_schema_table> schemas,
-             std::shared_ptr<typing::make_scope_2_variable_table_table>
-                 make_scope_2_variable_table_table,
+             const std::unordered_map<std::shared_ptr<ast::make_scope>,
+                                      std::shared_ptr<name::variable_table>>
+                 &make_scope_2_variable_table_table,
              std::shared_ptr<llvm_values> values,
              llvm::LLVMContext &the_context, llvm::Module *the_module);
 } // namespace tig::magimocha::codegen2
