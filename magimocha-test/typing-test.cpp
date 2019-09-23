@@ -35,9 +35,14 @@ TEST(MagiMochaTyping, named_function_expression_scope_id_int) {
     auto vt =
         name::create_variable_table(std::shared_ptr<name::variable_table>());
     ms2vt[std::static_pointer_cast<ast::named_function>(r)] = vt;
-    name::register_name(r,vt,ms2vt);
+    name::register_name(r, vt, ms2vt);
     auto context = typing::context{
-        vt, type_table, std::make_shared<typing::type_schema_table_impl>(),
+        std::shared_ptr<name::module_table>(),
+        vt,
+        type_table,
+        std::make_shared<typing::type_schema_table_impl>(),
+        std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                           std::shared_ptr<name::module_table>>(),
         ms2vt};
     typing::infer(context, r);
     EXPECT_EQ(r->type(), ast::leaf_type::named_function);
@@ -90,7 +95,14 @@ TEST(MagiMochaTyping, named_function_expression_scope_id) {
     ms2vt[std::static_pointer_cast<ast::named_function>(r)] = vt;
     name::register_name(r, vt, ms2vt);
 
-    auto context = typing::context{vt, type_table, schema_table, ms2vt};
+    auto context = typing::context{
+        std::shared_ptr<name::module_table>(),
+        vt,
+        type_table,
+        schema_table,
+        std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                           std::shared_ptr<name::module_table>>(),
+        ms2vt};
     typing::infer(context, r);
     EXPECT_EQ(r->type(), ast::leaf_type::named_function);
     auto rr = std::static_pointer_cast<ast::named_function>(r);
@@ -129,7 +141,14 @@ TEST(MagiMochaTyping, named_function_expression_scope_id_and_apply) {
     ms2vt[std::static_pointer_cast<ast::expression_block>(r)] = vt;
     name::register_name(r, vt, ms2vt);
 
-    auto context = typing::context{vt, type_table, schema_table, ms2vt};
+    auto context = typing::context{
+        std::shared_ptr<name::module_table>(),
+        vt,
+        type_table,
+        schema_table,
+        std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                           std::shared_ptr<name::module_table>>(),
+        ms2vt};
     typing::infer(context, r);
 
     EXPECT_EQ(r->type(), ast::leaf_type::expression_block);

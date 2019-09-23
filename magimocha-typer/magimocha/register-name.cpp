@@ -28,9 +28,9 @@ template <class T> struct table_of_T_impl : name::table_of_T<T> {
     std::shared_ptr<T> get_deep(const ast::string_type &name) override {
         auto itr = map.find(name);
         if(itr != map.cend()) {
-            return itr->second;
+            return itr->second;      
         }
-        if(!upper) {
+              if(!upper) {
             return std::shared_ptr<T>();
         }
         return upper->get_deep(name);
@@ -197,4 +197,44 @@ void register_name(std::shared_ptr<ast::expression> target,
     auto vis = register_name_visitor{target_parent, ms2vt};
     ast::visit<register_name_visitor::R>(vis, target);
 }
+std::shared_ptr<ast::typed_data>
+get_with_path(const std::vector<ast::string_type> path,
+              std::shared_ptr<module_table> mt,
+              std::shared_ptr<variable_table> vt,
+              const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                                       std::shared_ptr<module_table>> &dm2mt,
+              const std::unordered_map<std::shared_ptr<ast::make_scope>,
+                                       std::shared_ptr<variable_table>> &ms2vt) {
+    switch(path.size()) {
+    case 0:
+        throw "illegal argument";
+    case 1:
+        return vt->get_deep(path.back());
+    default:
+        break;
+    }
+    auto itr = begin(path);
+    auto e = --end(path);
+    auto dm = mt->get_deep(*itr);
+    if(!dm) {
+        return std::shared_ptr<ast::typed_data>();
+    }
+    mt = dm2mt.at(dm);
+    ++itr;
+    for(; itr != e; ++itr) {
+        auto ref = mt->find_shallow(*itr);
+        if(!*ref) {
+            return std::shared_ptr<ast::typed_data>();
+        }
+        dm = ref->get();
+        mt = dm2mt.at(dm);
+    }
+    vt = ms2vt.at(dm);
+    auto ref = vt->find_shallow(*itr);
+    if(!*ref) {
+        return std::shared_ptr<ast::typed_data>();
+    }
+    return ref->get();
+                                           
+                                       }
 } // namespace tig::magimocha::name

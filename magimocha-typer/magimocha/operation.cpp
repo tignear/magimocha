@@ -106,7 +106,11 @@ struct operation_to_function_applying_process_op_token_double_visitor {
     template <class T> R operator()(T x) { return std::nullopt; }
 
     R operator()(ast::op_token_double ots) {
-        return op_infos->get_deep(ots.name()->value());
+        const auto &v = ots.name()->value();
+        if(v.size()!=1){//TODO
+            throw "NIMPL";
+        }
+        return op_infos->get_deep(v.back());
     }
 };
 struct operation_to_function_applying_process_op_token_double_visitor_2 {

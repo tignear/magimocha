@@ -21,7 +21,9 @@ struct llvm_values_impl : llvm_values {
     }
 };
 struct context {
+    std::shared_ptr<ast::declaration_module> mod;
     std::shared_ptr<ast::make_scope> scope;
+    std::shared_ptr<name::module_table> modules;
     std::shared_ptr<name::variable_table> vars;
     std::string name;
     unsigned int count_of_anonymous_function = 0;
@@ -31,6 +33,9 @@ struct context {
 void codegen(std::shared_ptr<ast::declaration_module> mod,
              std::shared_ptr<typing::type_table> types,
              std::shared_ptr<typing::type_schema_table> schemas,
+             const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                                      std::shared_ptr<name::module_table>>
+                 &declaration_module_2_module_table_table,
              const std::unordered_map<std::shared_ptr<ast::make_scope>,
                                       std::shared_ptr<name::variable_table>>
                  &make_scope_2_variable_table_table,

@@ -31,16 +31,26 @@ resolve_type(std::shared_ptr<type_table> table,
     }
 }
 struct resolve_name_visitor {
-    std::shared_ptr<name::variable_table> vars;
+    std::shared_ptr<name::module_table> mt;
+    std::shared_ptr<name::variable_table> vt;
+    const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                             std::shared_ptr<name::module_table>> &dm2mt;
+    const std::unordered_map<std::shared_ptr<ast::make_scope>,
+                             std::shared_ptr<name::variable_table>> &ms2vt;
     auto operator()(std::shared_ptr<ast::call_name> cn) {
-        return vars->get_deep(cn->value());
+        return name::get_with_path(cn->value(), mt, vt, dm2mt, ms2vt);
     }
     template <class T> T operator()(T v) { return v; }
 };
-std::shared_ptr<ast::typed_data>
-resolve_name(std::shared_ptr<name::variable_table> vars,
-             std::shared_ptr<ast::typed_data> t) {
-    auto vis = resolve_name_visitor{vars};
+std::shared_ptr<ast::typed_data> resolve_name(
+    std::shared_ptr<name::module_table> mt,
+    std::shared_ptr<name::variable_table> vt,
+    const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                             std::shared_ptr<name::module_table>> &dm2mt,
+    const std::unordered_map<std::shared_ptr<ast::make_scope>,
+                             std::shared_ptr<name::variable_table>> &ms2vt,
+    std::shared_ptr<ast::typed_data> t) {
+    auto vis = resolve_name_visitor{mt, vt, dm2mt, ms2vt};
     return ast::visit<std::shared_ptr<ast::typed_data>>(vis, t);
 }
 void unify(std::shared_ptr<type_table> table,
@@ -112,7 +122,10 @@ std::shared_ptr<ast::type_data> infer(context con,
             return l->return_type();
         }
         R operator()(std::shared_ptr<ast::call_name> cn) {
-            auto ptr = con.vars->get_deep(cn->value());
+            auto ptr =
+                name::get_with_path(cn->value(), con.mt, con.vars,
+                                    con.declaration_module_2_module_table_table,
+                                    con.make_scope_2_variable_table_table);
             if(!ptr) {
                 throw "error:undefined name";
             }
@@ -140,7 +153,7 @@ std::shared_ptr<ast::type_data> infer(context con,
             return create_type_schema_from(con.types, schema).type_data;
         }
         R operator()(std::shared_ptr<ast::declaration_function> df) {
-            //auto new_vars = name::create_variable_table(con.vars);
+            // auto new_vars = name::create_variable_table(con.vars);
             // con.make_scope_2_variable_table_table->set(df, new_vars);
             auto &params = df->params();
             // std::vecttor<declaration_parameter> newparams;
@@ -160,7 +173,10 @@ std::shared_ptr<ast::type_data> infer(context con,
             }
 
             unify(con.types,
-                  infer(context{con.make_scope_2_variable_table_table.at(df), con.types, con.schemas,
+                  infer(context{con.mt,
+                                con.make_scope_2_variable_table_table.at(df),
+                                con.types, con.schemas,
+                                con.declaration_module_2_module_table_table,
                                 con.make_scope_2_variable_table_table},
                         df->body()),
                   df->return_type_func()->result_type);
@@ -171,7 +187,7 @@ std::shared_ptr<ast::type_data> infer(context con,
             return create_type_schema_from(con.types, schema).type_data;
         }
         R operator()(std::shared_ptr<ast::apply_function> af) {
-            auto resolved = resolve_name(con.vars, af->target());
+            auto resolved = resolve_name(con.mt,con.vars,con.declaration_module_2_module_table_table,con.make_scope_2_variable_table_table, af->target());
             if(!resolved) {
                 throw "undefined name";
             }
@@ -196,8 +212,11 @@ std::shared_ptr<ast::type_data> infer(context con,
         R operator()(std::shared_ptr<ast::expression_block> exprs) {
             auto &&list = exprs->value();
             std::shared_ptr<ast::type_data> r;
-            auto ncon = context{con.make_scope_2_variable_table_table.at(exprs),
-                                con.types, con.schemas,
+            auto ncon = context{con.mt,
+                                con.make_scope_2_variable_table_table.at(exprs),
+                                con.types,
+                                con.schemas,
+                                con.declaration_module_2_module_table_table,
                                 con.make_scope_2_variable_table_table};
             for(auto &&e : list) {
                 r = infer(ncon, e);
@@ -212,8 +231,11 @@ std::shared_ptr<ast::type_data> infer(context con,
                 throw "error:defined name";
             }
             ref->set(nf);*/
-            auto ncon= context{con.make_scope_2_variable_table_table.at(nf),
-                                con.types, con.schemas,
+            auto ncon = context{con.mt,
+                                con.make_scope_2_variable_table_table.at(nf),
+                                con.types,
+                                con.schemas,
+                                con.declaration_module_2_module_table_table,
                                 con.make_scope_2_variable_table_table};
             unify(con.types, nf->return_type(), infer(ncon, nf->body()));
             auto schema = create_type_schema(con.types, nf->return_type());

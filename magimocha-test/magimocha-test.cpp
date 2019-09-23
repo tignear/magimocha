@@ -420,7 +420,12 @@ TEST(MagiMocha, module_basic) {
 	std::u32string s = U"module xxx{def Id(x) = x\n infix  Id right 450}";
 	auto p = x::module_p();
 	auto r = p(src{ cbegin(s),cend(s) }).get();
-
+}
+TEST(MagiMocha, call_name_module_name) {
+	using namespace std::string_literals;
+	std::u32string s = U"module xxx{def Id(x) = xxx.yyy.x(x)}";
+	auto p = x::module_p();
+	auto r = p(src{ cbegin(s),cend(s) }).get();
 }
 /*TEST(MagiMocha, nyan) {
 	std::tuple<

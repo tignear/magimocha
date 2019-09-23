@@ -89,11 +89,11 @@ int main() {
                                           std::shared_ptr<name::module_table>>();
     auto mroot = name::create_module_table(std::shared_ptr<name::module_table>());
     name::register_name(r,mroot,root,dm2mt,ms2vt);
-    typing::infer_all(typing::context{root, types, schemas, ms2vt}, r);
+    typing::infer_all(typing::context{mroot,root, types, schemas,dm2mt, ms2vt}, r);
     auto llvmv = std::make_shared<cg2::llvm_values_impl>();
     llvm::LLVMContext con;
     auto mod = std::make_unique<llvm::Module>("root", con);
-    cg2::codegen(std::static_pointer_cast<ast::declaration_module>(r), types,
-                 schemas, ms2vt, llvmv, con, mod.get());
+    cg2::codegen(r, types,
+                 schemas,dm2mt, ms2vt, llvmv, con, mod.get());
     mod->print(llvm::outs(), nullptr);
 }

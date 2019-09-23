@@ -92,9 +92,13 @@ struct make_scope_2_variable_table_table_impl
     }
 };*/
 struct context {
+    std::shared_ptr<name::module_table> mt;
     std::shared_ptr<name::variable_table> vars;
     std::shared_ptr<type_table> types;
     std::shared_ptr<type_schema_table> schemas;
+    const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                             std::shared_ptr<name::module_table>>
+        &declaration_module_2_module_table_table;
     const std::unordered_map<std::shared_ptr<ast::make_scope>,
                              std::shared_ptr<name::variable_table>>
         &make_scope_2_variable_table_table;
@@ -130,9 +134,14 @@ resolve_type(std::shared_ptr<type_table> table,
     std::unordered_set<std::shared_ptr<ast::var_type_data>> ig;
     return resolve_type(table, t, ig);
 }
-std::shared_ptr<ast::typed_data>
-resolve_name(std::shared_ptr<name::variable_table> vars,
-             std::shared_ptr<ast::typed_data> t);
+std::shared_ptr<ast::typed_data> resolve_name(
+    std::shared_ptr<name::module_table> mt,
+    std::shared_ptr<name::variable_table> vt,
+    const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                             std::shared_ptr<name::module_table>> &dm2mt,
+    const std::unordered_map<std::shared_ptr<ast::make_scope>,
+                             std::shared_ptr<name::variable_table>> &ms2vt,
+    std::shared_ptr<ast::typed_data> t);
 static inline type_schema
 create_type_schema(std::shared_ptr<type_table> types,
                    std::shared_ptr<ast::type_data> t) {

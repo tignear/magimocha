@@ -8,7 +8,6 @@
 namespace tig::magimocha {
 namespace ast {
 enum class leaf_type {
-    // declaration_name,
     declaration_parameter,
     declaration_function,
     signed_number_literal,
@@ -28,7 +27,6 @@ enum class leaf_type {
 };
 using char_type = char32_t;
 using string_type = std::basic_string<char_type>;
-// struct expression;
 
 struct ast_base {
     virtual ~ast_base() {}
@@ -253,13 +251,13 @@ class apply_function final : public expression, public ast_leaf {
     const auto &args() const { return args_; }
 };
 class call_name final : public expression, public ast_leaf {
-    string_type value_;
+    std::vector<string_type> value_;
     std::shared_ptr<type_data> type_data_ = std::make_shared<var_type_data>();
 
   public:
     leaf_type type() const override { return leaf_type::call_name; }
-    explicit call_name(const string_type &value) : value_(value) {}
-    const string_type &value() const { return value_; }
+    explicit call_name(const std::vector<string_type> &value) : value_(value) {}
+    const std::vector<string_type> &value() const { return value_; }
     std::shared_ptr<type_data> return_type() const override {
         return type_data_;
     }

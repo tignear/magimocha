@@ -15,6 +15,9 @@ struct codegen_visitor {
     std::deque<context> context;
     std::shared_ptr<typing::type_table> types;
     std::shared_ptr<typing::type_schema_table> schemas;
+    const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                             std::shared_ptr<name::module_table>>
+        declaration_module_2_module_table_table;
     const std::unordered_map<std::shared_ptr<ast::make_scope>,std::shared_ptr<name::variable_table>>&
         make_scope_2_variable_table_table;
     std::shared_ptr<llvm_values> values;
@@ -24,11 +27,15 @@ struct codegen_visitor {
     llvm::Module *the_module;
     codegen_visitor(std::shared_ptr<typing::type_table> types,
                     std::shared_ptr<typing::type_schema_table> schemas,
+                        const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                             std::shared_ptr<name::module_table>>
+        declaration_module_2_module_table_table,
                     const std::unordered_map<std::shared_ptr<ast::make_scope>,std::shared_ptr<name::variable_table>>&
                         make_scope_2_variable_table_table,
                     std::shared_ptr<llvm_values> values,
                     llvm::LLVMContext &the_context, llvm::Module *the_module)
         : types(types), schemas(schemas),
+        declaration_module_2_module_table_table(declaration_module_2_module_table_table),
           make_scope_2_variable_table_table(make_scope_2_variable_table_table),
           values(values), the_context(the_context), builder(the_context),
           the_module(the_module) {}
@@ -38,27 +45,28 @@ struct codegen_visitor {
     }
     std::string get_name(const std::u32string &s) { return to_string(s); }
 
-    void scope_in_base(std::shared_ptr<ast::make_scope> s, std::string name) {
+    void scope_in_base(std::shared_ptr<ast::declaration_module> mod,std::shared_ptr<ast::make_scope> s, std::string name) {
         auto vars = make_scope_2_variable_table_table.at(s);
+        auto modules = declaration_module_2_module_table_table.at(mod);
         context.push_back(codegen2::context{
-            s, vars ? vars : name::create_variable_table(context.back().vars), name});
+            mod,s,modules, vars , name});
     }
     void scope_in(std::shared_ptr<ast::declaration_function> df) {
-        scope_in_base(df, get_name() + "." +
+        scope_in_base(context.back().mod,df, get_name() + "." +
                               std::to_string(++(
                                   context.back().count_of_anonymous_function)));
     }
     void scope_in(std::shared_ptr<ast::expression_block> eb) {
-        scope_in_base(eb, get_name() + "." +
+        scope_in_base(context.back().mod,eb, get_name() + "." +
                               std::to_string(++(
                                   context.back().count_of_expression_block)));
     }
     void scope_in(std::shared_ptr<ast::declaration_module> dm) {
-        scope_in_base(dm, get_name() + "." + to_string(dm->name()));
+        scope_in_base(dm,dm, get_name() + "." + to_string(dm->name()));
     }
 
     void scope_in(std::shared_ptr<ast::named_function> nf) {
-        scope_in_base(nf, get_name() + "." + to_string(nf->name()));
+        scope_in_base(context.back().mod,nf, get_name() + "." + to_string(nf->name()));
     }
     template <class T> std::string mangling(const T &src) {}
     void scope_out(std::shared_ptr<ast::make_scope> s) { context.pop_back(); }
@@ -108,7 +116,9 @@ struct codegen_visitor {
     }
     R operator()(std::shared_ptr<ast::string_literal> l) { throw "NIMPL"; }
     R operator()(std::shared_ptr<ast::call_name> cn) {
-        auto v = context.back().vars->get_deep(cn->value());
+        auto &ccon = context.back();
+       
+        auto v =  name::get_with_path(cn->value(),ccon.modules,ccon.vars,declaration_module_2_module_table_table,make_scope_2_variable_table_table);
         auto r = values->get(v);
         if(!r) {
             throw std::exception("ILLEGAL STATE");
@@ -136,11 +146,11 @@ struct codegen_visitor {
         auto tcn = std::static_pointer_cast<ast::call_name>(af->target());
         const auto &name = tcn->value();
         const auto &args = af->args();
-        if(name == U"+") {
+        if(name.size()==1&&name.back() == U"+") {
             return builder.CreateFAdd(ast::walk<R>(*this, args.at(0)),
                                       ast::walk<R>(*this, args.at(1)));
         }
-        if(name == U"*") {
+        if(name.size()==1&&name.back() == U"*") {
             return builder.CreateFMul(ast::walk<R>(*this, args.at(0)),
                                       ast::walk<R>(*this, args.at(1)));
         }
@@ -212,12 +222,15 @@ namespace tig::magimocha::codegen2 {
 void codegen(std::shared_ptr<ast::declaration_module> mod,
              std::shared_ptr<typing::type_table> types,
              std::shared_ptr<typing::type_schema_table> schemas,
+              const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                                      std::shared_ptr<name::module_table>>
+                 &declaration_module_2_module_table_table,
              const std::unordered_map<std::shared_ptr<ast::make_scope>,std::shared_ptr<name::variable_table>>&
                  make_scope_2_variable_table_table,
              std::shared_ptr<llvm_values> values,
              llvm::LLVMContext &the_context, llvm::Module *the_module) {
     auto walker =
-        codegen_visitor(types, schemas, make_scope_2_variable_table_table,
+        codegen_visitor(types, schemas,declaration_module_2_module_table_table, make_scope_2_variable_table_table,
                         values, the_context, the_module);
     walker.scope_in(mod);
     auto r = walker(mod);

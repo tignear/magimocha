@@ -988,13 +988,26 @@ namespace tig::magimocha {
 				);
             }
 			static auto op() {
-				return cppcp::map(
-					op_s(),
-					[](auto&& e){
-						return std::make_shared<ast::call_name>(e);
-					}
+                return cppcp::map(
+                                cppcp::join(
+                                    
+                                        cppcp::many(
+                                            cppcp::sup<Itr,std::vector<string_type>>(std::vector<string_type>()),
+                                            cppcp::get0(cppcp::join(identifier(),cppcp::skip(dot()))),
+											[](auto s, auto e) { 
+												s.push_back(e);
+												return cppcp::accm::contd(s); 
+											}
+										),
+                                    op_s()
+								),
+                                [](auto &&e) {
+                                    auto v=std::get<0>(e);
+                                    v.push_back(std::get<1>(e));
+                                    return std::make_shared<ast::call_name>(v);
+                                }
 				);
-			}
+            }
 
 
 
@@ -1129,15 +1142,25 @@ namespace tig::magimocha {
 			useable_name
 			*/
 			static auto call_name() {
-				return cppcp::map(
-					cppcp::trys(
-						identifier()
-					),
-					[](const auto& e) {
-					return std::make_shared<ast::call_name>(e);
-				}
-				);
-			}
+                            return cppcp::map(
+                                cppcp::join(
+                                    cppcp::many(
+                                        cppcp::sup<Itr,
+                                                   std::vector<string_type>>(
+                                            std::vector<string_type>()),
+                                        cppcp::get0(cppcp::join(identifier(),
+                                        cppcp::skip(dot()))),
+                                        [](auto a, auto e) {
+                                            a.push_back(e);
+                                            return cppcp::accm::contd(a);
+                                        }),
+                                    identifier()),
+                                [](const auto &e) {
+                                    auto v=std::get<0>(e);
+                                    v.push_back(std::get<1>(e));
+                                    return std::make_shared<ast::call_name>(v);
+                                });
+                        }
 			static auto operand() {
 				return expression();
 			}
