@@ -125,6 +125,7 @@ struct register_name_visitor {
         for(auto e : op->value()) {
             std::visit(v, e);
         }
+        return r;
     }
     R operator()(std::shared_ptr<ast::literal_> lit) { return r; }
     R operator()(std::shared_ptr<ast::apply_function> af) { return r; }

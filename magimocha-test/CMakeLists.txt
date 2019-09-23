@@ -18,7 +18,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 include(GoogleTest)
 
 add_test(NAME magimocha-test COMMAND magimocha-test)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stack:4000000")	
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stack:10000000")	
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 endif()

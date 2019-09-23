@@ -107,10 +107,10 @@ struct operation_to_function_applying_process_op_token_double_visitor {
 
     R operator()(ast::op_token_double ots) {
         const auto &v = ots.name()->value();
-        if(v.size()!=1){//TODO
+        if(v.size() != 1) { // TODO
             throw "NIMPL";
         }
-        return op_infos->get_deep(v.back());
+        return op_infos->get_deep(v);
     }
 };
 struct operation_to_function_applying_process_op_token_double_visitor_2 {
@@ -223,7 +223,8 @@ struct operation_to_function_applying_visitor {
     auto operator()(std::shared_ptr<ast::declaration_function> x) {
         return std::make_shared<ast::declaration_function>(
             x->params(), x->return_type_func(),
-            operation_to_function_applying_all(x->body(), op_infos.at(x), op_infos));
+            operation_to_function_applying_all(x->body(), op_infos.at(x),
+                                               op_infos));
     }
     auto operator()(std::shared_ptr<ast::signed_number_literal> x) {
         // do nothing
@@ -259,8 +260,8 @@ struct operation_to_function_applying_visitor {
     auto operator()(std::shared_ptr<ast::expression_block> x) {
         std::vector<std::shared_ptr<ast::expression>> exprs;
         for(auto &&expr : x->value()) {
-            exprs.push_back(
-                operation_to_function_applying_all(expr, op_infos.at(x), op_infos));
+            exprs.push_back(operation_to_function_applying_all(
+                expr, op_infos.at(x), op_infos));
         }
         return std::make_shared<ast::expression_block>(std::move(exprs));
     }
@@ -334,24 +335,26 @@ std::shared_ptr<ast::expression> operation_to_function_applying_all(
 }
 struct operator_info_ref_impl : operator_info_ref {
 
-    std::unordered_map<ast::string_type, operator_info> &map;
-    ast::string_type key;
-    std::unordered_map<ast::string_type, operator_info>::const_iterator itr;
+    std::unordered_map<std::vector<ast::string_type>, operator_info> &map;
+    std::vector<ast::string_type> key;
+    std::unordered_map<std::vector<ast::string_type>,
+                       operator_info>::const_iterator itr;
     operator_info_ref_impl(
-        std::unordered_map<ast::string_type, operator_info> &map,
-        ast::string_type key,
-        std::unordered_map<ast::string_type, operator_info>::const_iterator itr)
+        std::unordered_map<std::vector<ast::string_type>, operator_info> &map,
+        std::vector<ast::string_type> key,
+        std::unordered_map<std::vector<ast::string_type>,
+                           operator_info>::const_iterator itr)
         : map(map), key(key), itr(itr) {}
     operator_info get() override { return itr->second; }
     void set(operator_info v) override { map.insert_or_assign(key, v); }
     operator bool() override { return itr != map.end(); }
 };
 std::unique_ptr<operator_info_ref>
-operator_info_table_impl::find_shallow(const ast::string_type &k) {
+operator_info_table_impl::find_shallow(const std::vector<ast::string_type> &k) {
     return std::make_unique<operator_info_ref_impl>(infos, k, infos.find(k));
 }
 std::optional<operator_info>
-operator_info_table_impl::get_deep(const ast::string_type &k) {
+operator_info_table_impl::get_deep(const std::vector<ast::string_type> &k) {
     auto itr = infos.find(k);
     if(itr != infos.end()) {
         return itr->second;
@@ -361,6 +364,7 @@ operator_info_table_impl::get_deep(const ast::string_type &k) {
     }
     return parent->get_deep(k);
 }
+
 struct extract_operator_info_visitor {
     std::shared_ptr<operator_info_table> p;
     std::unordered_map<std::shared_ptr<ast::make_scope>,
@@ -456,7 +460,7 @@ void extract_operator_info(
             return r;
         }
         auto operator()(std::shared_ptr<ast::declaration_infix> x) {
-            auto &&ref = p->find_shallow(x->name());
+            auto &&ref = p->find_shallow(x->name()->value());
 
             ref->set(operator_info{x->priority(), x->infix_type()});
             return r;
@@ -481,5 +485,47 @@ void extract_operator_info(
     };
     auto v = visitor(current, map);
     ast::visit<visitor::R, visitor>(v, target);
+}
+std::optional<operator_info> get_with_path(
+    const std::vector<ast::string_type> &path,
+    std::shared_ptr<name::module_table> mt,
+    std::shared_ptr<operator_info_table> oit,
+    const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                             std::shared_ptr<name::module_table>> &dm2mt,
+    const std::unordered_map<std::shared_ptr<ast::make_scope>,
+                             std::shared_ptr<operator_info_table>> &ms2oit) {
+    if(path.empty()) {
+        throw "illegal path";
+    }
+    if(path.size() == 1) {
+        return oit->get_deep(path);
+    }
+    auto itr = cbegin(path);
+    auto e = cend(path);
+    --e;
+    auto dm = mt->get_deep(*itr);
+    if(!dm) {
+        return std::nullopt;
+    }
+    mt = dm2mt.at(dm);
+    ++itr;
+    for(; itr != e; ++itr) {
+        auto ref = mt->find_shallow(*itr);
+        if(!*ref) {
+            throw "illegal path";
+        }
+        dm = ref->get();
+        mt = dm2mt.at(dm);
+    }
+    oit = ms2oit.at(dm);
+    auto ref = oit->find_shallow(path);
+    if(*ref) {
+        return ref->get();
+    }
+    ref = oit->find_shallow({*itr});
+    if(*ref) {
+        return ref->get();
+    }
+    throw "not found";
 }
 } // namespace tig::magimocha::codegen2

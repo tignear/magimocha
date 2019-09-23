@@ -17,7 +17,8 @@ TEST(MagiMochaTyping, named_function_expression_scope_id_int) {
     auto p = x::named_function_expression_scope();
     auto info_table = std::make_shared<cg2::operator_info_table_impl>(
         std::shared_ptr<cg2::operator_info_table>(),
-        std::unordered_map<ast::string_type, cg2::operator_info>());
+        std::unordered_map<std::vector<ast::string_type>,
+                           cg2::operator_info>());
     auto prraw = p(src{cbegin(s), cend(s)}).get();
     EXPECT_EQ(prraw->type(), ast::leaf_type::named_function);
     auto pr = std::static_pointer_cast<ast::named_function>(prraw);
@@ -73,7 +74,8 @@ TEST(MagiMochaTyping, named_function_expression_scope_id) {
     auto p = x::named_function_expression_scope();
     auto info_table = std::make_shared<cg2::operator_info_table_impl>(
         std::shared_ptr<cg2::operator_info_table>(),
-        std::unordered_map<ast::string_type, cg2::operator_info>());
+        std::unordered_map<std::vector<ast::string_type>,
+                           cg2::operator_info>());
     auto prraw = p(src{cbegin(s), cend(s)}).get();
 
     EXPECT_EQ(prraw->type(), ast::leaf_type::named_function);
@@ -120,7 +122,8 @@ TEST(MagiMochaTyping, named_function_expression_scope_id_and_apply) {
     auto p = x::expression_block();
     auto info_table = std::make_shared<cg2::operator_info_table_impl>(
         std::shared_ptr<cg2::operator_info_table>(),
-        std::unordered_map<ast::string_type, cg2::operator_info>());
+        std::unordered_map<std::vector<ast::string_type>,
+                           cg2::operator_info>());
 
     auto prraw = p(src{cbegin(s), cend(s)}).get();
     auto info_table_map =
@@ -216,7 +219,7 @@ TEST(MagiMochaTyping, extract_infix_in_expression_block) {
         map;
 
     cg2::extract_operator_info(pr, info_table, map);
-    auto ref = map.at(pr)->find_shallow(U"Id");
+    auto ref = map.at(pr)->find_shallow({U"Id"});
     EXPECT_TRUE(ref);
     auto info = ref->get();
     EXPECT_EQ(info.priority, 145);
@@ -236,7 +239,7 @@ TEST(MagiMochaTyping, extract_infix_in_module) {
         map;
 
     cg2::extract_operator_info(pr, info_table, map);
-    auto ref = map.at(pr)->find_shallow(U"+");
+    auto ref = map.at(pr)->find_shallow({U"+"});
     EXPECT_TRUE(ref);
     auto info = ref->get();
     EXPECT_EQ(info.priority, 125);

@@ -102,6 +102,7 @@ struct codegen_visitor {
                 return llvm::Type::getDoubleTy(the_context);
             }
         }
+        throw "illegal state";
     }
     R operator()(std::shared_ptr<ast::signed_number_literal> l) {
         return llvm::ConstantInt::get(the_context,

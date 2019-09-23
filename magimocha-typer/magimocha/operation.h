@@ -1,6 +1,8 @@
 #pragma once
+#include "helper.h"
 #include "magimocha/ast-visitor.h"
 #include "magimocha/ast.h"
+#include "magimocha/register-name.h"
 #include <unordered_map>
 namespace tig::magimocha::codegen2 {
 
@@ -16,23 +18,32 @@ struct operator_info_ref {
 };
 struct operator_info_table {
     virtual std::unique_ptr<operator_info_ref>
-    find_shallow(const ast::string_type &) = 0;
-    virtual std::optional<operator_info> get_deep(const ast::string_type &) = 0;
+    find_shallow(const std::vector<ast::string_type> &) = 0;
+    virtual std::optional<operator_info> get_deep(const std::vector<ast::string_type> &) = 0;
     virtual ~operator_info_table() {}
 };
-
+std::optional<operator_info> get_with_path(
+    const std::vector<ast::string_type>& path,
+    std::shared_ptr<name::module_table> mt,
+    std::shared_ptr<operator_info_table> oit,
+    const std::unordered_map<std::shared_ptr<ast::declaration_module>,
+                                       std::shared_ptr<name::module_table>> &dm2mt,
+    const std::unordered_map<std::shared_ptr<ast::make_scope>,
+                                       std::shared_ptr<operator_info_table>> &ms2oit
+);
 class operator_info_table_impl : public operator_info_table {
     std::shared_ptr<operator_info_table> parent;
-    std::unordered_map<ast::string_type, operator_info> infos;
+    std::unordered_map < std::vector<ast::string_type>, operator_info > infos;
 
   public:
     operator_info_table_impl(
         std::shared_ptr<operator_info_table> parent,
-        std::unordered_map<ast::string_type, operator_info> infos = {})
+        std::unordered_map < std::vector<ast::string_type>, operator_info > infos = {})
         : parent(parent), infos(infos) {}
     std::unique_ptr<operator_info_ref>
-    find_shallow(const ast::string_type &) override;
-    std::optional<operator_info> get_deep(const ast::string_type &) override;
+    find_shallow(const std::vector<ast::string_type> &) override;
+    std::optional<operator_info> get_deep(const std::vector<ast::string_type> &) override;
+
 };
 using operator_token_type_processed_op_token_function_applying = std::variant<
     ast::op_token_single, ast::op_token_double,

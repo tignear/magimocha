@@ -250,17 +250,20 @@ class apply_function final : public expression, public ast_leaf {
     const auto &target() const { return target_; }
     const auto &args() const { return args_; }
 };
+enum class path_type { full, relative };
 class call_name final : public expression, public ast_leaf {
     std::vector<string_type> value_;
+    path_type path_type_;
     std::shared_ptr<type_data> type_data_ = std::make_shared<var_type_data>();
 
   public:
     leaf_type type() const override { return leaf_type::call_name; }
-    explicit call_name(const std::vector<string_type> &value) : value_(value) {}
+    explicit call_name(std::vector<string_type> value,path_type path_type) : value_(value),path_type_(path_type) {}
     const std::vector<string_type> &value() const { return value_; }
     std::shared_ptr<type_data> return_type() const override {
         return type_data_;
     }
+    path_type path_type() { return path_type_; }
 };
 class expression_block final : public expression,
                                public ast_leaf,
@@ -373,17 +376,17 @@ enum class infix_type { left, right };
 class declaration_infix final : public module_member,
                                 public expression,
                                 public ast_leaf {
-    string_type name_;
+    std::shared_ptr<ast::call_name> name_;
     infix_type infix_type_;
     int priority_;
 
   public:
-    declaration_infix(const string_type &name, infix_type infix_type,
+    declaration_infix(std::shared_ptr<ast::call_name> name, infix_type infix_type,
                       int priority)
         : name_(name), infix_type_(infix_type), priority_(priority) {}
     infix_type infix_type() const { return infix_type_; }
     int priority() const { return priority_; }
-    const string_type &name() const { return name_; }
+    std::shared_ptr<ast::call_name> name() const { return name_; }
     std::shared_ptr<type_data> return_type() const override {
         return std::make_shared<simple_type_data>(U"Nothing");
     }
